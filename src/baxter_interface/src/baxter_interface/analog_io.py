@@ -28,6 +28,7 @@
 import errno
 
 import rclpy
+import rclpy.node
 
 import baxter_dataflow
 
