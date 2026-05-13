@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
 
-        ('share/' + package_name, 'config/*.yaml'),
+        # ('share/' + package_name, 'config/*.yaml'),
     ],
     package_data={'': ['py.typed']},
     install_requires=['setuptools'],
