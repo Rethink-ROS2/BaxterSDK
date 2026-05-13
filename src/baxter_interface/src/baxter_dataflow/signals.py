@@ -26,9 +26,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import inspect
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, WeakSet
 
-from weakref import WeakSet
 
 class Signal(object):
     def __init__(self):
@@ -45,7 +44,7 @@ class Signal(object):
 
     def connect(self, slot):
         if inspect.ismethod(slot):
-            if not slot.__self__ in self._methods:
+            if slot.__self__ not in self._methods:
                 self._methods[slot.__self__] = set()
             self._methods[slot.__self__].add(slot.__func__)
         else:

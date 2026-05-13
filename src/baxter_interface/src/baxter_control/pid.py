@@ -3,6 +3,7 @@
 # by J. M. Hughes, published by O'Reilly Media, December 2010,
 # ISBN 978-0-596-80956-0.
 
+
 class PID(object):
     """
     PID control class
@@ -68,5 +69,4 @@ class PID(object):
         self._prev_err = error  # save t-1 error
 
         # sum the terms and return the result
-        return ((self._kp * self._cp) + (self._ki * self._ci) +
-                (self._kd * self._cd))
+        return (self._kp * self._cp) + (self._ki * self._ci) + (self._kd * self._cd)

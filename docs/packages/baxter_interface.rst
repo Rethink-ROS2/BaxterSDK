@@ -36,4 +36,3 @@ baxter_interface Repository Overview
      |   +-- head_action_server.py
      |
      +-- cfg/                                  dynamic reconfigure action configs
-

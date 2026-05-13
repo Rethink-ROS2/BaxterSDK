@@ -19,4 +19,3 @@ string args     # JSON arguments to the command
 #
 string sender   # optional identifier, returned in state when the command is handled
 uint32 sequence # optional sequence number, return in state when the command is handled
-

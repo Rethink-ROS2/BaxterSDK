@@ -31,8 +31,7 @@ import time
 import rclpy
 
 
-def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100,
-             timeout_msg="timeout expired", body=None):
+def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100, timeout_msg='timeout expired', body=None):
     """
     Waits until some condition evaluates to true.
 
@@ -45,13 +44,13 @@ def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100,
     """
     interval = 1.0 / rate
     max_iter = int(timeout * rate)
-    notimeout = (timeout < 0.0) or timeout == float("inf")
+    notimeout = (timeout < 0.0) or timeout == float('inf')
     iters = 0
     while not test():
         iters += 1
         if not rclpy.ok():
             if raise_on_error:
-                raise OSError(errno.ESHUTDOWN, "ROS Shutdown")
+                raise OSError(errno.ESHUTDOWN, 'ROS Shutdown')
             return False
         elif (not notimeout) and iters > max_iter:
             if raise_on_error:

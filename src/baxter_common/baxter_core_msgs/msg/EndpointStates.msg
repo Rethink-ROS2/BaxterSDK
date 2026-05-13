@@ -1,3 +1,2 @@
 string[] names
 EndpointState[] states
-

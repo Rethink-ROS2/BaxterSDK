@@ -1,9 +1,11 @@
 """Unit tests for the baxter_interface.analog_io module."""
+
 import errno
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-from baxter_core_msgs.msg import AnalogIOState, AnalogOutputCommand
+from baxter_core_msgs.msg import AnalogIOState
+
 from baxter_interface.analog_io import AnalogIO
 
 COMPONENT_ID = 'test_id'
@@ -36,13 +38,14 @@ def _make_node():
 
 
 class TestAnalogIO(unittest.TestCase):
-
     def _make_io(self, node, trigger, value=0, is_input_only=True):
         """Construct AnalogIO, firing the state callback inside wait_for."""
         with patch('baxter_dataflow.wait_for') as mock_wait:
+
             def deliver_state(n, test, **kwargs):
                 trigger(_make_state_msg(value, is_input_only))
                 return True
+
             mock_wait.side_effect = deliver_state
             io = AnalogIO(node, COMPONENT_ID)
         return io
@@ -78,9 +81,11 @@ class TestAnalogIO(unittest.TestCase):
         io = self._make_io(node, trigger, value=0, is_input_only=False)
 
         with patch('baxter_dataflow.wait_for') as mock_wait:
+
             def deliver_feedback(n, test, **kwargs):
                 trigger(_make_state_msg(42, False))
                 return True
+
             mock_wait.side_effect = deliver_feedback
             io.set_output(42)
 

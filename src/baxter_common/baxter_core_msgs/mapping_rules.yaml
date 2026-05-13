@@ -1,3 +1,4 @@
+---
 - ros1_message_name: EndEffectorState
   ros1_package_name: baxter_core_msgs
   ros2_message_name: EndEffectorState
