@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
@@ -27,44 +25,36 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from dynamic_reconfigure.parameter_generator_catkin import (
-    ParameterGenerator,
-    double_t,
-)
+import inspect
+from weakref import WeakKeyDictionary
 
-gen = ParameterGenerator()
+from weakref import WeakSet
 
-gen.add(
-    'goal_time', double_t, 0,
-    "Amount of time (s) controller is permitted to be late achieving goal",
-    0.1, 0.0, 120.0,
-)
-gen.add(
-    'stopped_velocity_tolerance', double_t, 0,
-    "Maximum velocity (m/s) at end of trajectory to be considered stopped",
-    0.25, -1.0, 1.0,
-)
+class Signal(object):
+    def __init__(self):
+        self._functions = WeakSet()
+        self._methods = WeakKeyDictionary()
 
-joints = (
-    'left_s0', 'left_s1', 'left_e0', 'left_e1', 'left_w0', 'left_w1',
-    'left_w2', 'right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0',
-    'right_w1', 'right_w2',
-    )
+    def __call__(self, *args, **kargs):
+        for f in self._functions:
+            f(*args, **kargs)
 
-params = ('_goal', '_trajectory',)
-msg = (
-    " - maximum final error",
-    " - maximum error during trajectory execution",
-    )
-min = (-1.0, -1.0,)
-default = (-1.0, 0.2,)
-max = (1.0, 1.0,)
+        for obj, functions in self._methods.items():
+            for f in functions:
+                f(obj, *args, **kargs)
 
-for idx, param in enumerate(params):
-    for joint in joints:
-        gen.add(
-            joint + param, double_t, 0, joint + msg[idx],
-            default[idx], min[idx], max[idx]
-        )
+    def connect(self, slot):
+        if inspect.ismethod(slot):
+            if not slot.__self__ in self._methods:
+                self._methods[slot.__self__] = set()
+            self._methods[slot.__self__].add(slot.__func__)
+        else:
+            self._functions.add(slot)
 
-exit(gen.generate('baxter_interface', '', 'PositionJointTrajectoryActionServer'))
+    def disconnect(self, slot):
+        if inspect.ismethod(slot):
+            if slot.__self__ in self._methods:
+                self._methods[slot.__self__].remove(slot.__func__)
+        else:
+            if slot in self._functions:
+                self._functions.remove(slot)

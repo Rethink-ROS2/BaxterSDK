@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
@@ -27,38 +25,38 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from dynamic_reconfigure.parameter_generator_catkin import (
-    ParameterGenerator,
-    double_t,
-)
+import errno
 
-gen = ParameterGenerator()
+import rclpy
 
-grippers = ('left_gripper', 'right_gripper')
 
-params = (
-    '_timeout', '_goal', '_velocity', '_moving_force', '_holding_force',
-    '_vacuum_threshold', '_blow_off',
-    )
+def wait_for(test, timeout=1.0, raise_on_error=True, rate=100,
+             timeout_msg="timeout expired", body=None):
+    """
+    Waits until some condition evaluates to true.
 
-msg = (
-    " - Timeout (Seconds) to achieve command or determined gripping",
-    " - Electric Gripper - Maximum final error",
-    " - Electric Gripper - Velocity",
-    " - Electric Gripper - Force threshold. Grip achieved when surpassed.",
-    " - Electric Gripper - Holding force applied when gripping/after motion.",
-    " - Suction Gripper - Vacuum threshold. Grip achieved when surpassed.",
-    " - Suction Gripper - When suction ceased, seconds of blown air.",
-    )
-min = (-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-default = (5.0, 5.0, 50.0, 40.0, 30.0, 18.0, 0.0)
-max = (20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0)
-
-for gripper in grippers:
-    for idx, param in enumerate(params):
-        gen.add(
-            gripper + param, double_t, 0, gripper + msg[idx],
-            default[idx], min[idx], max[idx]
-            )
-
-exit(gen.generate('baxter_interface', '', 'GripperActionServer'))
+    @param test: zero param function to be evaluated
+    @param timeout: max amount of time to wait. negative/inf for indefinitely
+    @param raise_on_error: raise or just return False
+    @param rate: the rate at which to check
+    @param timout_msg: message to supply to the timeout exception
+    @param body: optional function to execute while waiting
+    """
+    max_iter = timeout*rate
+    rate = rclpy.Rate(rate)
+    notimeout = (timeout < 0.0) or timeout == float("inf")
+    iters = 0
+    while not test():
+        iters += 1
+        if rclpy.ok() is False:
+            if raise_on_error:
+                raise OSError(errno.ESHUTDOWN, "ROS Shutdown")
+            return False
+        elif (not notimeout) and iters > max_iter:
+            if raise_on_error:
+                raise OSError(errno.ETIMEDOUT, timeout_msg)
+            return False
+        if callable(body):
+            body()
+        rate.sleep()
+    return True
