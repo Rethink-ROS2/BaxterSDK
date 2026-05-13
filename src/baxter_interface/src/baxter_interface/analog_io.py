@@ -84,6 +84,7 @@ class AnalogIO(object):
             timeout=2.0,
             timeout_msg="Failed to get current analog_io state from %s" \
             % (topic_base,),
+            body=lambda: rclpy.spin_once(node, timeout_sec=0.1)
             )
 
         # check if output-capable before creating publisher
