@@ -31,6 +31,8 @@ import rclpy
 
 import baxter_dataflow
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
 from baxter_core_msgs.msg import (
     AnalogIOState,
     AnalogOutputCommand,
@@ -48,12 +50,13 @@ class AnalogIO(object):
       - set new output state
       - read current output state
     """
-    def __init__(self, component_id):
+    def __init__(self, node: rclpy.node.Node, component_id: str):
         """
         Constructor.
 
         @param component_id: unique id of analog component
         """
+        self._node = node
         self._id = component_id
         self._component_type = 'analog_io'
         self._is_output = False
@@ -62,13 +65,20 @@ class AnalogIO(object):
 
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id
+        
+        state_qos = QoSProfile( 
+            reliability=ReliabilityPolicy.RELIABLE, 
+            history=HistoryPolicy.KEEP_LAST, 
+            depth=1
+        )
 
-        self._sub_state = rclpy.Subscriber(
-            topic_base + '/state',
+        self._sub_state = node.create_subscription(
             AnalogIOState,
-            self._on_io_state)
+            topic_base + '/state',
+            self._on_io_state, state_qos)
 
         baxter_dataflow.wait_for(
+            node,
             lambda: len(self._state.keys()) != 0,
             
             timeout=2.0,
@@ -78,7 +88,7 @@ class AnalogIO(object):
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = rclpy.Publisher(
+            self._pub_output = node.create_publisher(
                 type_ns + '/command',
                 AnalogOutputCommand,
                 queue_size=10)
@@ -87,7 +97,7 @@ class AnalogIO(object):
         """
         Updates the internally stored state of the Analog Input/Output.
         """
-        self._is_output = not msg.isInputOnly
+        self._is_output = not msg.is_input_only
         self._state['value'] = msg.value
 
     def state(self):
