@@ -83,7 +83,7 @@ class AnalogIO(object):
             timeout=2.0,
             timeout_msg="Failed to get current analog_io state from %s" \
             % (topic_base,),
-            body=lambda: rclpy.spin_once(node, timeout_sec=0.1)
+            body=lambda: rclpy.spin_once(node, timeout_sec=0.01)
             )
 
         # check if output-capable before creating publisher
@@ -91,7 +91,7 @@ class AnalogIO(object):
             self._pub_output = node.create_publisher(
                 AnalogOutputCommand,
                 type_ns + '/command',
-                queue_size=10)
+                10)
 
     def _on_io_state(self, msg):
         """
@@ -137,5 +137,5 @@ class AnalogIO(object):
                 timeout=timeout,
                 rate=100,
                 timeout_msg=("Failed to command analog io to: %d" % (value,)),
-                body=lambda: self._pub_output.publish(cmd)
-                )
+                body=lambda: (self._pub_output.publish(cmd), rclpy.spin_once(self._node, timeout_sec=0.01))
+            )
