@@ -30,7 +30,7 @@ import errno
 import rclpy
 
 
-def wait_for(test, timeout=1.0, raise_on_error=True, rate=100,
+def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100,
              timeout_msg="timeout expired", body=None):
     """
     Waits until some condition evaluates to true.
@@ -43,7 +43,7 @@ def wait_for(test, timeout=1.0, raise_on_error=True, rate=100,
     @param body: optional function to execute while waiting
     """
     max_iter = timeout*rate
-    rate = rclpy.Rate(rate)
+    rate = node.create_rate(rate)
     notimeout = (timeout < 0.0) or timeout == float("inf")
     iters = 0
     while not test():
