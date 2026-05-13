@@ -67,10 +67,10 @@ class AnalogIO(object):
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id
         
-        state_qos = QoSProfile( 
-            reliability=ReliabilityPolicy.RELIABLE, 
-            history=HistoryPolicy.KEEP_LAST, 
-            depth=1
+        state_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
         )
 
         self._sub_state = node.create_subscription(
@@ -80,11 +80,10 @@ class AnalogIO(object):
 
         baxter_dataflow.wait_for(
             node,
-            lambda: len(self._state.keys()) != 0,   
+            lambda: len(self._state.keys()) != 0,
             timeout=2.0,
             timeout_msg="Failed to get current analog_io state from %s" \
             % (topic_base,),
-            body=lambda: rclpy.spin_once(node, timeout_sec=0.01)
             )
 
         # check if output-capable before creating publisher
@@ -138,5 +137,5 @@ class AnalogIO(object):
                 timeout=timeout,
                 rate=100,
                 timeout_msg=("Failed to command analog io to: %d" % (value,)),
-                body=lambda: (self._pub_output.publish(cmd), rclpy.spin_once(self._node, timeout_sec=0.01))
+                body=lambda: self._pub_output.publish(cmd)
             )

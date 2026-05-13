@@ -26,6 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
+import time
 
 import rclpy
 
@@ -42,13 +43,13 @@ def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100,
     @param timout_msg: message to supply to the timeout exception
     @param body: optional function to execute while waiting
     """
-    max_iter = timeout*rate
-    rate = node.create_rate(rate)
+    interval = 1.0 / rate
+    max_iter = int(timeout * rate)
     notimeout = (timeout < 0.0) or timeout == float("inf")
     iters = 0
     while not test():
         iters += 1
-        if rclpy.ok() is False:
+        if not rclpy.ok():
             if raise_on_error:
                 raise OSError(errno.ESHUTDOWN, "ROS Shutdown")
             return False
@@ -58,5 +59,5 @@ def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100,
             return False
         if callable(body):
             body()
-        rate.sleep()
+        time.sleep(interval)
     return True
