@@ -79,8 +79,7 @@ class AnalogIO(object):
 
         baxter_dataflow.wait_for(
             node,
-            lambda: len(self._state.keys()) != 0,
-            
+            lambda: len(self._state.keys()) != 0,   
             timeout=2.0,
             timeout_msg="Failed to get current analog_io state from %s" \
             % (topic_base,),
@@ -90,8 +89,8 @@ class AnalogIO(object):
         # check if output-capable before creating publisher
         if self._is_output:
             self._pub_output = node.create_publisher(
-                type_ns + '/command',
                 AnalogOutputCommand,
+                type_ns + '/command',
                 queue_size=10)
 
     def _on_io_state(self, msg):
@@ -133,6 +132,7 @@ class AnalogIO(object):
 
         if not timeout == 0:
             baxter_dataflow.wait_for(
+                self._node,
                 test=lambda: self.state() == value,
                 timeout=timeout,
                 rate=100,
