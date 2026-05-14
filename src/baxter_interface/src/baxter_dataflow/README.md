@@ -8,3 +8,28 @@ Follows an [observer pattern](https://www.geeksforgeeks.org/system-design/observ
 #### wait_for
 
 This functions waits for state of a test to become true.
+
+##### Logging
+ROS 1
+
+```python
+
+```
+
+ROS 2
+
+```python
+
+```
+
+#### Shutdown
+
+```python
+
+```
+
+ROS 2
+
+```python
+
+```
