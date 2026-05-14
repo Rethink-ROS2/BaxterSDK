@@ -31,7 +31,7 @@ import argparse
 import sys
 
 import rclpy
-import rclpy.node as Node
+from rclpy.node import Node
 
 import baxter_interface.analog_io as AIO
 
