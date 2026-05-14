@@ -66,7 +66,7 @@ sub = node.create_subscription(String, 'chatter', callback, 10)
 
 ---
 
-#### Services
+### Services
 
 ```python
 srv = rospy.Service('add_two_ints', AddTwoInts, add_two_ints_callback)
@@ -80,7 +80,7 @@ srv = node.create_service(AddTwoInts, 'add_two_ints', add_two_ints_callback)
 
 ---
 
-##### Service Clients
+#### Service Clients
 
 ```python
 rospy.wait_for_service('add_two_ints')
