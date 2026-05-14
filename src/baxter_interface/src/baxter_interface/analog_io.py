@@ -28,8 +28,7 @@
 import errno
 
 import baxter_dataflow
-import rclpy
-import rclpy.node
+import rclpy.node as Node
 from baxter_core_msgs.msg import (
     AnalogIOState,
     AnalogOutputCommand,
@@ -49,7 +48,7 @@ class AnalogIO(object):
       - read current output state
     """
 
-    def __init__(self, node: rclpy.node.Node, component_id: str):
+    def __init__(self, node: Node, component_id: str):
         """
         Constructor.
 

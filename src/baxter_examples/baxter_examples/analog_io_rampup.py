@@ -30,18 +30,20 @@
 from __future__ import print_function
 
 import argparse
+import sys
 
-import rospy
+import rclpy
+import rclpy.node as Node
 
 import baxter_interface.analog_io as AIO
 
 
-def test_interface(io_component='torso_fan'):
+def test_interface(node: Node, io_component='torso_fan'):
     """Ramps an Analog component from 0 to 100, then back down to 0."""
-    rospy.loginfo('Ramping output of Analog IO component: %s', io_component)
+    node.get_logger().info('Ramping output of Analog IO component: %s', io_component)
 
     b = AIO.AnalogIO(io_component)
-    rate = rospy.Rate(2)
+    rate = node.create_rate(2)
 
     # start: 0.0
     print(b.state())
@@ -74,7 +76,7 @@ def main():
     """
     epilog = """
 ROS Parameters:
-  ~component_id        - name of AnalogIO component to use
+  component_id        - name of AnalogIO component to use
 
 Baxter AnalogIO
     Note that 'AnalogIO' components are only those that use
@@ -94,10 +96,13 @@ Baxter AnalogIO
         default='torso_fan',
         help='name of Analog IO component to use (default:= torso_fan)',
     )
-    args = parser.parse_args(rospy.myargv()[1:])
+    args = parser.parse_args()
 
-    rospy.init_node('rsdk_analog_io_rampup', anonymous=True)
-    io_component = rospy.get_param('~component_id', args.component_id)
+    with rclpy.init(args=sys.argv):
+        node = rclpy.create_node('rsdk_analog_io_rampup')
+
+    node.declare_parameter('component_id', args.component_id)
+    io_component = node.get_parameter('component_id').get_parameter_value().string_value
     test_interface(io_component)
 
 
