@@ -29,6 +29,7 @@
 
 import argparse
 import sys
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -58,7 +59,7 @@ def test_interface(node: Node, io_component='torso_fan'):
     for i in range(100, -1, -10):
         b.set_output(i)
         print(i)
-        rate.sleep()
+        time.sleep(0.5)
     # (fans off)
     b.set_output(0)
 
@@ -83,7 +84,7 @@ Baxter AnalogIO
 
     AnalogIO component names can be found on the Wiki or by
     echoing the names field of the analog_io_states topic:
-      $ rostopic echo -n 1 /robot/analog_io_states/names
+      $ ros2 topic echo /robot/analog_io_states/names --once
     """
     arg_fmt = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(formatter_class=arg_fmt, description=main.__doc__, epilog=epilog)
@@ -99,9 +100,9 @@ Baxter AnalogIO
     with rclpy.init(args=sys.argv):
         node = rclpy.create_node('rsdk_analog_io_rampup')
 
-    node.declare_parameter('component_id', args.component_id)
-    io_component = node.get_parameter('component_id').get_parameter_value().string_value
-    test_interface(node, io_component)
+        node.declare_parameter('component_id', args.component_id)
+        io_component = node.get_parameter('component_id').get_parameter_value().string_value
+        test_interface(node, io_component)
 
 
 if __name__ == '__main__':
