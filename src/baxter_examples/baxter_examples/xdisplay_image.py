@@ -71,14 +71,16 @@ def send_gif(path, node: Node):
 
     while cap.isOpened():
         ret, frame = cap.read()
-        if not ret:
+        if ret is False:
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            random_delay = random.randint(1, 10)
+            random_delay = random.randint(2, 6)
             time.sleep(random_delay)
+            continue
 
+        frame = cv2.resize(frame, (1024, 600))
         msg = cv_bridge.CvBridge().cv2_to_imgmsg(frame, encoding='bgr8')
         pub.publish(msg)
-        time.sleep(0.05)
+        time.sleep(0.03)
 
 
 def main():
