@@ -33,7 +33,7 @@ from baxter_core_msgs.msg import (
     AnalogIOState,
     AnalogOutputCommand,
 )
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 
 class AnalogIO(object):
@@ -72,7 +72,6 @@ class AnalogIO(object):
 
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
             depth=5,
         )
