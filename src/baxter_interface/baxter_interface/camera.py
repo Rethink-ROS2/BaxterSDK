@@ -27,7 +27,6 @@
 
 import errno
 
-import rclpy
 import rclpy.node as Node
 from baxter_core_msgs.msg import (
     CameraControl,
@@ -74,13 +73,11 @@ class CameraController(object):
         self._id = name
         self._node = node
 
-        list_svc = rclpy.create_service(ListCameras, '/cameras/list')
+        list_svc = self._node.create_client(ListCameras, '/cameras/list')
         while not list_svc.wait_for_service(timeout_sec=10):
-            rclpy.logging.get_logger('CameraController').warn(
-                'Waiting for service /cameras/list to become available...'
-            )
+            self._node.get_logger().warn('CameraController: Waiting for service /cameras/list to become available...')
 
-        if self._id not in list_svc().cameras:
+        if self._id not in list_svc.call(ListCameras.Request()).cameras:
             raise AttributeError(
                 (
                     "Cannot locate a service for camera name '{0}'. "
@@ -88,8 +85,8 @@ class CameraController(object):
                 )
             )
 
-        self._open_svc = self._node.create_service(OpenCamera, '/cameras/open')
-        self._close_svc = self._node.create_service(CloseCamera, '/cameras/close')
+        self._open_svc = self._node.create_client(OpenCamera, '/cameras/open')
+        self._close_svc = self._node.create_client(CloseCamera, '/cameras/close')
 
         self._settings = CameraSettings()
         self._settings.width = 320
@@ -325,7 +322,11 @@ class CameraController(object):
         if self._id == 'head_camera':
             self._set_control_value(CameraControl.CAMERA_CONTROL_FLIP, True)
             self._set_control_value(CameraControl.CAMERA_CONTROL_MIRROR, True)
-        ret = self._open_svc(self._id, self._settings)
+
+        req = OpenCamera.Request()
+        req.name = self._id
+        req.settings = self._settings
+        ret = self._open_svc.call(req)
         if ret.err != 0:
             raise OSError(ret.err, 'Failed to open camera')
         self._open = True
@@ -334,7 +335,9 @@ class CameraController(object):
         """
         Close, if necessary the camera.
         """
-        ret = self._close_svc(self._id)
+        req = CloseCamera.Request()
+        req.name = self._id
+        ret = self._close_svc.call(req)
         if ret.err != 0 and ret.err != errno.EINVAL:
             raise OSError(ret.err, 'Failed to close camera')
         self._open = False
