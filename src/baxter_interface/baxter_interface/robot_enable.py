@@ -28,10 +28,10 @@
 import errno
 
 import baxter_dataflow
+from baxter_core_msgs.msg import AssemblyState
 from rclpy.node import Node
-from std_msgs.msg import Bool, Empty
-
-from baxter_common.baxter_core_msgs.msg import AssemblyState
+from std_msgs.msg import Bool as Bool
+from std_msgs.msg import Empty as Empty
 
 
 class RobotEnable(object):
@@ -50,7 +50,7 @@ class RobotEnable(object):
         """
         self._state = None
         state_topic = 'robot/state'
-        self._state_sub = node.create_subscription(AssemblyState, state_topic, self._state_callback)
+        self._state_sub = node.create_subscription(AssemblyState, state_topic, self._state_callback, 10)
 
         baxter_dataflow.wait_for(
             node,
@@ -63,17 +63,17 @@ class RobotEnable(object):
         self._state = msg
 
     def _toggle_enabled(self, node: Node, status):
-        pub = node.create_publisher('robot/set_super_enable', Bool, 10)
+        pub = node.create_publisher(Bool, 'robot/set_super_enable', 10)
 
         baxter_dataflow.wait_for(
             node,
             test=lambda: self._state.enabled == status,
             timeout=2.0 if status else 5.0,
-            timeout_msg=(f'Failed to {"en" if status else "dis"} + isable robot'),
-            body=lambda: pub.publish(status),
+            timeout_msg=(f'Failed to {"en" if status else "dis"}able robot'),
+            body=lambda: pub.publish(Bool(data=status)),
         )
 
-        node.get_logger().info()(f'Robot {"Enabled" if status else "Disabled"}')
+        node.get_logger().info(f'Robot {"Enabled" if status else "Disabled"}')
 
     def state(self):
         """
@@ -87,14 +87,14 @@ class RobotEnable(object):
         """
         if self._state.stopped:
             node.get_logger().info('Robot Stopped: Attempting Reset...')
-            self.reset()
-        self._toggle_enabled(True)
+            self.reset(node)
+        self._toggle_enabled(node=node, status=True)
 
-    def disable(self):
+    def disable(self, node: Node):
         """
         Disable all joints
         """
-        self._toggle_enabled(False)
+        self._toggle_enabled(node=node, status=False)
 
     def reset(self, node: Node):
         """
@@ -122,7 +122,7 @@ and resolvable.
                 and self._state.estop_source == 0
             )
 
-        pub = node.create_publisher('robot/set_super_reset', Empty, queue_size=10)
+        pub = node.create_publisher(Empty, 'robot/set_super_reset', 10)
 
         if self._state.stopped and self._state.estop_button == AssemblyState.ESTOP_BUTTON_PRESSED:
             node.get_logger().error(error_estop)
@@ -143,7 +143,7 @@ and resolvable.
         Simulate an e-stop button being pressed.  Robot must be reset to clear
         the stopped state.
         """
-        pub = node.create_publisher('robot/set_super_stop', Empty, 10)
+        pub = node.create_publisher(Empty, 'robot/set_super_stop', 10)
         baxter_dataflow.wait_for(
             node,
             test=lambda: self._state.stopped,

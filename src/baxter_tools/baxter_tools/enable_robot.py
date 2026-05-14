@@ -63,15 +63,15 @@ def main():
             if act == 'state':
                 print(rs.state())
             elif act == 'enable':
-                rs.enable()
+                rs.enable(node)
             elif act == 'disable':
-                rs.disable()
+                rs.disable(node)
             elif act == 'reset':
-                rs.reset()
+                rs.reset(node)
             elif act == 'stop':
                 rs.stop()
     except Exception as e:
-        node.get_logger().error(e.strerror)
+        node.get_logger().error(str(e))
 
     return 0
 
