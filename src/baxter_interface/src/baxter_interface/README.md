@@ -1,5 +1,33 @@
 # baxter_interface migration
 
+## QOS Profiles
+
+ROS 1
+
+```python
+# No QoS profiles in ROS 1, but you can set queue_size for publishers and subscribers
+pub = rospy.Publisher('chatter', String, queue_size=10)
+sub = rospy.Subscriber('chatter', String, callback, queue_size=10)
+```
+
+ROS 2
+https://docs.ros.org/en/kilted/Concepts/Intermediate/About-Quality-of-Service-Settings.html
+
+```python
+# In ROS 2, you can specify QoS profiles for publishers and subscribers
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+state_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+pub = node.create_publisher(String, 'chatter', state_qos)
+sub = node.create_subscription(String, 'chatter', callback, state_qos)
+
+```
+
 ## Publishers
 ROS 1
 
