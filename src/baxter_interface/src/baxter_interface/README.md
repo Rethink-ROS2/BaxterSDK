@@ -45,6 +45,8 @@ pub = node.create_publisher(String, 'chatter', rclpy.qos.QoSProfile())
 pub = node.create_publisher(String, 'chatter', 10)
 ```
 
+---
+
 ### Subscribers
 ROS 1
 
@@ -62,6 +64,8 @@ sub = node.create_subscription(String, 'chatter', callback, rclpy.qos.QoSProfile
 sub = node.create_subscription(String, 'chatter', callback, 10)
 ```
 
+---
+
 #### Services
 
 ```python
@@ -73,6 +77,8 @@ ROS 2
 ```python
 srv = node.create_service(AddTwoInts, 'add_two_ints', add_two_ints_callback)
 ```
+
+---
 
 ##### Service Clients
 
