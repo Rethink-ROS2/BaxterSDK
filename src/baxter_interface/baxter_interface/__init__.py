@@ -26,13 +26,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from .analog_io import AnalogIO as AnalogIO
+
 # from .camera import CameraController
 # from .digital_io import DigitalIO
 # from .gripper import Gripper
 # from .head import Head
 # from .limb import Limb
 # from .navigator import Navigator
-# from .robot_enable import RobotEnable
+from .robot_enable import RobotEnable as RobotEnable
 # from .robust_controller import RobustController
 # from .settings import (
 #     JOINT_ANGLE_TOLERANCE,
