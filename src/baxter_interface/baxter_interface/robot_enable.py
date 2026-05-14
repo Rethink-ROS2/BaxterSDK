@@ -26,7 +26,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
-from threading import Lock
 
 import baxter_dataflow
 from rclpy.node import Node
@@ -45,22 +44,9 @@ class RobotEnable(object):
     stop()    - stop the robot, similar to hitting the e-stop button
     """
 
-    param_lock = Lock()
-
-    def __init__(self, node: Node, versioned=False):
+    def __init__(self, node: Node):
         """
-        Version checking capable constructor.
-
-        @type versioned: bool
-        @param versioned: True to check robot software version
-        compatibility on initialization. False (default) to ignore.
-
-        The compatibility of robot versions to SDK (baxter_interface)
-        versions is defined in the L{baxter_interface.VERSIONS_SDK2ROBOT}.
-
-        By default, the class does not check, but all examples do. The
-        example behavior can be overridden by changing the value of
-        L{baxter_interface.CHECK_VERSION} to False.
+        Constructor for RobotEnable class.
         """
         self._state = None
         state_topic = 'robot/state'
@@ -124,8 +110,7 @@ error persists. Check diagnostics or rethink.log for more info.
 """
         error_env = """Failed to reset robot.
 Please verify that the ROS_IP or ROS_HOSTNAME environment variables are set
-and resolvable. For more information please visit:
-http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
+and resolvable.
 """
 
         def is_reset():
@@ -145,7 +130,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
 
         node.get_logeer().info('Resetting robot...')
         try:
-            baxter_dataflow.wait_for(test=is_reset, timeout=3.0, timeout_msg=error_env, body=pub.publish)
+            baxter_dataflow.wait_for(node, test=is_reset, timeout=3.0, timeout_msg=error_env, body=pub.publish)
         except OSError as e:
             if e.errno == errno.ETIMEDOUT:
                 if self._state.error and not self._state.stopped:

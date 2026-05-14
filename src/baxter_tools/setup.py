@@ -15,7 +15,7 @@ setup(
     zip_safe=True,
     maintainer='Andnet DeBoer',
     maintainer_email='deboerandnet@gmail.com',
-    description='TODO: Package description',
+    description='Useful operational and maintenance tools for use with the Baxter Research Robot from Rethink Robotics',
     license='MIT',
     extras_require={
         'test': [
@@ -23,6 +23,8 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [],
+        'console_scripts': [
+            'enable_robot = baxter_tools.enable_robot:main',
+        ],
     },
 )
