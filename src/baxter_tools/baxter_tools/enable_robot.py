@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
@@ -27,15 +27,12 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import print_function
-
 import argparse
 import sys
 
-import rospy
+import rclpy
 
-import baxter_interface
-from baxter_interface import CHECK_VERSION
+import baxter_interface as baxter
 
 
 def main():
@@ -51,14 +48,14 @@ def main():
     )
     parser.add_argument('-r', '--reset', const='reset', dest='actions', action='append_const', help='Reset the robot')
     parser.add_argument('-S', '--stop', const='stop', dest='actions', action='append_const', help='Stop the robot')
-    args = parser.parse_args(rospy.myargv()[1:])
+    args = parser.parse_args()
 
     if args.actions is None:
         parser.print_usage()
         parser.exit(0, 'No action defined')
 
-    rospy.init_node('rsdk_robot_enable')
-    rs = baxter_interface.RobotEnable(CHECK_VERSION)
+    node = rclpy.create_node('rsdk_robot_enable')
+    rs = baxter.RobotEnable()
 
     try:
         for act in args.actions:
@@ -73,7 +70,7 @@ def main():
             elif act == 'stop':
                 rs.stop()
     except Exception as e:
-        rospy.logerr(e.strerror)
+        node.get_logger().error(e.strerror)
 
     return 0
 
