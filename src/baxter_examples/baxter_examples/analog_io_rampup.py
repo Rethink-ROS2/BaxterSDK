@@ -42,7 +42,6 @@ def test_interface(node: Node, io_component='torso_fan'):
     node.get_logger().info(f'Ramping output of Analog IO component: {io_component}')
 
     b = AIO.AnalogIO(node, io_component)
-    rate = node.create_rate(2)
 
     # start: 0.0
     print(b.state())
@@ -51,7 +50,7 @@ def test_interface(node: Node, io_component='torso_fan'):
     for i in range(0, 101, 10):
         b.set_output(i)
         print(i)
-        rate.sleep()
+        time.sleep(0.5)
     # max: 100.0
     print(b.state())
 
