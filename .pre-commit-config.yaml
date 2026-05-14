@@ -5,6 +5,7 @@ repos:
     hooks:
       # Basic checks and fixes that apply to any text file and the git repository itself
       - id: polymath-general
+        exclude: \.(gif|png|jpg|jpeg)$
       # Specific languages
       - id: polymath-python
       - id: polymath-cpp

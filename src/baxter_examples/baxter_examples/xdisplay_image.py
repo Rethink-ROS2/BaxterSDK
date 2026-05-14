@@ -29,6 +29,7 @@
 
 import argparse
 import os
+import random
 import sys
 import time
 
@@ -57,6 +58,29 @@ def send_image(path, node: Node):
     # time.sleep(1)
 
 
+def send_gif(path, node: Node):
+    """
+    Send the gif located at the specified path to the head
+    display on Baxter.
+
+    @param path: path to the gif file to load and send
+    """
+    qos = rclpy.qos.QoSProfile(depth=1, durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL)
+    cap = cv2.VideoCapture(path)
+    pub = node.create_publisher(Image, '/robot/xdisplay', qos)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            random_delay = random.randint(1, 10)
+            time.sleep(random_delay)
+
+        msg = cv_bridge.CvBridge().cv2_to_imgmsg(frame, encoding='bgr8')
+        pub.publish(msg)
+        time.sleep(0.05)
+
+
 def main():
     """RSDK Xdisplay Example: Image Display
 
@@ -81,7 +105,7 @@ Notes:
     )
     args = parser.parse_args()
     rclpy.init()
-    node = rclpy.create_node('rsdk_xdisplay_image', anonymous=True)
+    node = rclpy.create_node('rsdk_xdisplay_image')
 
     if not os.access(args.file, os.R_OK):
         node.get_logger().error(f'Cannot read file at {args.file}')
@@ -92,7 +116,10 @@ Notes:
         node.get_logger().info((f'Waiting for {args.delay} second(s) before publishing image to face'))
         time.sleep(args.delay)
 
-    send_image(args.file)
+    if args.file.lower().endswith('.gif'):
+        send_gif(args.file, node=node)
+    else:
+        send_image(args.file, node=node)
     return 0
 
 
