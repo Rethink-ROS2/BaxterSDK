@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'analog_io_rampup = baxter_examples.analog_io_rampup:main',
+            'xdisplay_image = baxter_examples.xdisplay_image:main',
         ],
     },
 )
