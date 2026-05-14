@@ -54,8 +54,9 @@ def main():
         parser.print_usage()
         parser.exit(0, 'No action defined')
 
+    rclpy.init()
     node = rclpy.create_node('rsdk_robot_enable')
-    rs = baxter.RobotEnable()
+    rs = baxter.RobotEnable(node)
 
     try:
         for act in args.actions:
