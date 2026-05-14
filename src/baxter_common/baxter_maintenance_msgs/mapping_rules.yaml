@@ -27,3 +27,15 @@
   ros1_package_name: baxter_maintenance_msgs
   ros2_message_name: TareEnable
   ros2_package_name: baxter_maintenance_msgs
+- ros1_message_name: UpdateSource
+  ros1_package_name: baxter_maintenance_msgs
+  ros2_message_name: UpdateSource
+  ros2_package_name: baxter_maintenance_msgs
+- ros1_message_name: UpdateSources
+  ros1_package_name: baxter_maintenance_msgs
+  ros2_message_name: UpdateSources
+  ros2_package_name: baxter_maintenance_msgs
+- ros1_message_name: UpdateStatus
+  ros1_package_name: baxter_maintenance_msgs
+  ros2_message_name: UpdateStatus
+  ros2_package_name: baxter_maintenance_msgs

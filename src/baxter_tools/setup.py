@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'enable_robot = baxter_tools.enable_robot:main',
+            'camera_control = baxter_tools.camera_control:main',
         ],
     },
 )

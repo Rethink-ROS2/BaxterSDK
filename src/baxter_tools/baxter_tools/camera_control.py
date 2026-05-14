@@ -36,6 +36,7 @@ import std_srvs.srv
 from baxter_core_msgs.srv import (
     ListCameras,
 )
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 
 from baxter_interface.camera import CameraController
 
@@ -44,15 +45,20 @@ class Camera(object):
     def __init__(self, node: Node, name: str = 'camera_control'):
         self._node = node
         self._name = name
-        self._controller = CameraController(node)
+
+        self.list_cameras_cb_group = MutuallyExclusiveCallbackGroup()
+        self.reset_cb_group = MutuallyExclusiveCallbackGroup()
 
     def list_cameras(self, *_args, **_kwds):
-        ls = self._node.create_client(ListCameras, 'cameras/list')
+        ls = self._node.create_client(ListCameras, 'cameras/list_cameras', callback_group=self.list_cameras_cb_group)
 
         while not ls.wait_for_service(timeout_sec=10):
             self._node.get_logger().warn('CameraController: Waiting for service /cameras/list to become available...')
+            rclpy.spin_once(self._node, timeout_sec=0.1)
 
-        resp = ls.call(ListCameras.Request())
+        future = ls.call_async(ListCameras.Request())
+        rclpy.spin_until_future_complete(self._node, future)
+        resp = future.result()
         if len(resp.cameras):
             cam_topics = {cam: f'/cameras/{cam}/image' for cam in resp.cameras}
             open_cams = {cam: False for cam in resp.cameras}
@@ -67,10 +73,11 @@ class Camera(object):
             print('No cameras found')
 
     def reset_cameras(self, *_args, **_kwds):
-        reset_srv = self._node.create_client(std_srvs.srv.Empty, 'cameras/reset')
+        reset_srv = self._node.create_client(std_srvs.srv.Empty, 'cameras/reset', callback_group=self.reset_cb_group)
         while not reset_srv.wait_for_service(timeout_sec=10):
             self._node.get_logger().warn('CameraController: Waiting for service /cameras/reset to become available...')
-        reset_srv(std_srvs.Empty.Request())
+        future = reset_srv.call_async(std_srvs.srv.Empty.Request())
+        rclpy.spin_until_future_complete(self._node, future)
 
     def enum_cameras(self, *_args, **_kwds):
         try:
@@ -126,7 +133,7 @@ def main():
 
     rclpy.init()
     node = rclpy.create_node('rsdk_camera_control')
-    cam = Camera(node)
+    cam = Camera(name='camera', node=node)
 
     if args.list:
         cam.list_cameras()

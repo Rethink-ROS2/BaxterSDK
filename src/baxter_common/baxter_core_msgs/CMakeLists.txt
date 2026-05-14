@@ -49,10 +49,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RobustControllerStatus.msg"
   "msg/SEAJointState.msg"
   "msg/URDFConfiguration.msg"
-  # "srv/CloseCamera.srv"
-  # "srv/ListCameras.srv"
-  # "srv/OpenCamers.srv"
-  # "srv/SolvePositionsIK.srv"
+  "srv/CloseCamera.srv"
+  "srv/ListCameras.srv"
+  "srv/OpenCamera.srv"
+  "srv/SolvePositionIK.srv"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs sensor_msgs
 
 )
