@@ -14,3 +14,9 @@ In ROS 1 it was a standalone script in scripts/. In ROS 2 the pattern is to put 
   },
 
 ```
+
+Now to run our examples we can use the standard ROS 2 commands:
+
+```bash
+ros2 run baxter_examples analog_io_rampup
+```
