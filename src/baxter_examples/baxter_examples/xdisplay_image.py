@@ -71,7 +71,7 @@ def send_gif(path, node: Node):
 
     while cap.isOpened():
         ret, frame = cap.read()
-        if ret is False:
+        if not ret:
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             random_delay = random.randint(2, 6)
             time.sleep(random_delay)

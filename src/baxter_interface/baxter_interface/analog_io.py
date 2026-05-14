@@ -33,7 +33,7 @@ from baxter_core_msgs.msg import (
     AnalogIOState,
     AnalogOutputCommand,
 )
-from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 
 class AnalogIO(object):
@@ -70,6 +70,13 @@ class AnalogIO(object):
             depth=1,
         )
 
+        sensor_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5,
+        )
+
         self._sub_state = node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, state_qos)
 
         baxter_dataflow.wait_for(
@@ -81,7 +88,7 @@ class AnalogIO(object):
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = node.create_publisher(AnalogOutputCommand, type_ns + '/command', 10)
+            self._pub_output = node.create_publisher(AnalogOutputCommand, type_ns + '/command', sensor_qos)
 
     def _on_io_state(self, msg):
         """
