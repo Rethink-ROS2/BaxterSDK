@@ -25,7 +25,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from .analog_io import AnalogIO
+from .analog_io import AnalogIO as AnalogIO
 # from .camera import CameraController
 # from .digital_io import DigitalIO
 # from .gripper import Gripper

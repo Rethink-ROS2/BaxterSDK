@@ -34,14 +34,14 @@ import time
 import rclpy
 from rclpy.node import Node
 
-import baxter_interface.analog_io as AIO
+import baxter_interface as baxter
 
 
 def test_interface(node: Node, io_component='torso_fan'):
     """Ramps an Analog component from 0 to 100, then back down to 0."""
     node.get_logger().info(f'Ramping output of Analog IO component: {io_component}')
 
-    b = AIO.AnalogIO(node, io_component)
+    b = baxter.AnalogIO(node, io_component)
 
     # start: 0.0
     print(b.state())
