@@ -40,9 +40,9 @@ import baxter_interface.analog_io as AIO
 
 def test_interface(node: Node, io_component='torso_fan'):
     """Ramps an Analog component from 0 to 100, then back down to 0."""
-    node.get_logger().info('Ramping output of Analog IO component: %s', io_component)
+    node.get_logger().info(f'Ramping output of Analog IO component: {io_component}')
 
-    b = AIO.AnalogIO(io_component)
+    b = AIO.AnalogIO(node, io_component)
     rate = node.create_rate(2)
 
     # start: 0.0
@@ -103,7 +103,7 @@ Baxter AnalogIO
 
     node.declare_parameter('component_id', args.component_id)
     io_component = node.get_parameter('component_id').get_parameter_value().string_value
-    test_interface(io_component)
+    test_interface(node, io_component)
 
 
 if __name__ == '__main__':
