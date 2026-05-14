@@ -26,7 +26,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
-import time
 
 import rclpy
 
@@ -58,5 +57,5 @@ def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100, timeout_msg
             return False
         if callable(body):
             body()
-        time.sleep(interval)
+        rclpy.spin_once(node, timeout_sec=interval)
     return True
