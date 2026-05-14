@@ -125,6 +125,6 @@ class AnalogIO(object):
                 test=lambda: self.state() == value,
                 timeout=timeout,
                 rate=100,
-                timeout_msg=('Failed to command analog io to: %d' % (value,)),
+                timeout_msg=(f'Failed to command analog io to: {(value,)}'),
                 body=lambda: self._pub_output.publish(cmd),
             )
