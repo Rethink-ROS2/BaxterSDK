@@ -64,19 +64,13 @@ class AnalogIO(object):
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id
 
-        state_qos = QoSProfile(
+        qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
         )
 
-        sensor_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=5,
-        )
-
-        self._sub_state = node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, state_qos)
+        self._sub_state = node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, qos)
 
         baxter_dataflow.wait_for(
             node,
@@ -87,7 +81,7 @@ class AnalogIO(object):
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = node.create_publisher(AnalogOutputCommand, type_ns + '/command', sensor_qos)
+            self._pub_output = node.create_publisher(AnalogOutputCommand, type_ns + '/command', qos)
 
     def _on_io_state(self, msg):
         """
@@ -119,7 +113,7 @@ class AnalogIO(object):
                         If 0, just command once and return. [0]
         """
         if not self._is_output:
-            raise IOError(errno.EACCES, 'Component is not an output [%s: %s]' % (self._component_type, self._id))
+            raise IOError(errno.EACCES, f'Component is not an output [{self._component_type}: {self._id}]')
         cmd = AnalogOutputCommand()
         cmd.name = self._id
         cmd.value = value
