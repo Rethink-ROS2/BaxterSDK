@@ -27,11 +27,11 @@
 
 
 import baxter_dataflow
-import rclpy.node as Node
 from baxter_core_msgs.msg import (
     HeadPanCommand,
     HeadState,
 )
+from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Bool
 
@@ -130,7 +130,7 @@ class Head(object):
                     cmd_speed, HeadPanCommand.MIN_SPEED_RATIO, HeadPanCommand.MAX_SPEED_RATIO
                 )
             )
-        msg = HeadPanCommand(angle, cmd_speed, True)
+        msg = HeadPanCommand(target=angle, speed_ratio=cmd_speed, enable_pan_request=True)
         self._pub_pan.publish(msg)
 
         if not timeout == 0:
@@ -151,7 +151,7 @@ class Head(object):
         @param timeout: Seconds to wait for the head to nod.
                         If 0, just command once and return. [0]
         """
-        self._pub_nod.publish(True)
+        self._pub_nod.publish(Bool(data=True))
 
         if not timeout == 0:
             # Wait for nod to initiate
@@ -161,7 +161,7 @@ class Head(object):
                 timeout=timeout,
                 rate=100,
                 timeout_msg='Failed to initiate head nod command',
-                body=lambda: self._pub_nod.publish(True),
+                body=lambda: self._pub_nod.publish(Bool(data=True)),
             )
 
             # Wait for nod to complete
@@ -171,5 +171,5 @@ class Head(object):
                 timeout=timeout,
                 rate=100,
                 timeout_msg='Failed to complete head nod command',
-                body=lambda: self._pub_nod.publish(False),
+                body=lambda: self._pub_nod.publish(Bool(data=False)),
             )

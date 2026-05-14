@@ -25,33 +25,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from .analog_io import AnalogIO as AnalogIO
-from .camera import CameraController as CameraController
+JOINT_ANGLE_TOLERANCE = 0.008726646
+HEAD_PAN_ANGLE_TOLERANCE = 0.1396263401
 
-# from .digital_io import DigitalIO
-# from .gripper import Gripper
-from .head import Head as Head
-
-# from .limb import Limb
-# from .navigator import Navigator
-from .robot_enable import RobotEnable as RobotEnable
-
-# from .robust_controller import RobustController
-from .settings import (
-    CHECK_VERSION as CHECK_VERSION,
-)
-from .settings import (
-    HEAD_PAN_ANGLE_TOLERANCE as HEAD_PAN_ANGLE_TOLERANCE,
-)
-from .settings import (
-    JOINT_ANGLE_TOLERANCE as JOINT_ANGLE_TOLERANCE,
-)
-from .settings import (
-    SDK_VERSION as SDK_VERSION,
-)
-from .settings import (
-    VERSIONS_SDK2GRIPPER as VERSIONS_SDK2GRIPPER,
-)
-from .settings import (
-    VERSIONS_SDK2ROBOT as VERSIONS_SDK2ROBOT,
-)
+## Versioning
+SDK_VERSION = '1.2.0'
+CHECK_VERSION = True
+# Version Compatibility Maps - {current: compatible}
+VERSIONS_SDK2ROBOT = {'1.2.0': ['1.2.0']}
+VERSIONS_SDK2GRIPPER = {
+    '1.2.0': {
+        'warn': '2014/5/20 00:00:00',  # Version 1.0.0
+        'fail': '2013/10/15 00:00:00',  # Version 0.6.2
+    }
+}
