@@ -70,7 +70,7 @@ class AnalogIO(object):
             depth=1,
         )
 
-        self._sub_state = node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, qos)
+        self._sub_state = self._node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, qos)
 
         baxter_dataflow.wait_for(
             node,
@@ -81,7 +81,7 @@ class AnalogIO(object):
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = node.create_publisher(AnalogOutputCommand, type_ns + '/command', qos)
+            self._pub_output = self._node.create_publisher(AnalogOutputCommand, type_ns + '/command', qos)
 
     def _on_io_state(self, msg):
         """
