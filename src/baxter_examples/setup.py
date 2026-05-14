@@ -23,6 +23,8 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [],
+        'console_scripts': [
+            'analog_io_rampup = baxter_examples.analog_io_rampup:main',
+        ],
     },
 )
