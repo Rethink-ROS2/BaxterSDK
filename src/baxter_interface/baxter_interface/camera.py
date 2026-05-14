@@ -27,6 +27,7 @@
 
 import errno
 
+import rclpy
 import rclpy.node as Node
 from baxter_core_msgs.msg import (
     CameraControl,
@@ -37,6 +38,7 @@ from baxter_core_msgs.srv import (
     ListCameras,
     OpenCamera,
 )
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 
 
 class CameraController(object):
@@ -72,12 +74,15 @@ class CameraController(object):
         """
         self._id = name
         self._node = node
+        self._cb_group = MutuallyExclusiveCallbackGroup()
 
-        list_svc = self._node.create_client(ListCameras, '/cameras/list')
+        list_svc = self._node.create_client(ListCameras, '/cameras/list', callback_group=self._cb_group)
         while not list_svc.wait_for_service(timeout_sec=10):
             self._node.get_logger().warn('CameraController: Waiting for service /cameras/list to become available...')
 
-        if self._id not in list_svc.call(ListCameras.Request()).cameras:
+        future = list_svc.call_async(ListCameras.Request())
+        rclpy.spin_until_future_complete(self._node, future)
+        if self._id not in future.result().cameras:
             raise AttributeError(
                 (
                     "Cannot locate a service for camera name '{0}'. "
@@ -85,8 +90,8 @@ class CameraController(object):
                 )
             )
 
-        self._open_svc = self._node.create_client(OpenCamera, '/cameras/open')
-        self._close_svc = self._node.create_client(CloseCamera, '/cameras/close')
+        self._open_svc = self._node.create_client(OpenCamera, '/cameras/open', callback_group=self._cb_group)
+        self._close_svc = self._node.create_client(CloseCamera, '/cameras/close', callback_group=self._cb_group)
 
         self._settings = CameraSettings()
         self._settings.width = 320
@@ -326,7 +331,9 @@ class CameraController(object):
         req = OpenCamera.Request()
         req.name = self._id
         req.settings = self._settings
-        ret = self._open_svc.call(req)
+        future = self._open_svc.call_async(req)
+        rclpy.spin_until_future_complete(self._node, future)
+        ret = future.result()
         if ret.err != 0:
             raise OSError(ret.err, 'Failed to open camera')
         self._open = True
@@ -337,7 +344,9 @@ class CameraController(object):
         """
         req = CloseCamera.Request()
         req.name = self._id
-        ret = self._close_svc.call(req)
+        future = self._close_svc.call_async(req)
+        rclpy.spin_until_future_complete(self._node, future)
+        ret = future.result()
         if ret.err != 0 and ret.err != errno.EINVAL:
             raise OSError(ret.err, 'Failed to close camera')
         self._open = False

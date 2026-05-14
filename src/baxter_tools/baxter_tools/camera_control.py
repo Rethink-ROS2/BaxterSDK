@@ -50,7 +50,7 @@ class Camera(object):
         self.reset_cb_group = MutuallyExclusiveCallbackGroup()
 
     def list_cameras(self, *_args, **_kwds):
-        ls = self._node.create_client(ListCameras, 'cameras/list_cameras', callback_group=self.list_cameras_cb_group)
+        ls = self._node.create_client(ListCameras, 'cameras/list', callback_group=self.list_cameras_cb_group)
 
         while not ls.wait_for_service(timeout_sec=10):
             self._node.get_logger().warn('CameraController: Waiting for service /cameras/list to become available...')
