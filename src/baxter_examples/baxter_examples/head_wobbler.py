@@ -62,7 +62,10 @@ class Wobbler(object):
         disabling the robot
         """
         print('\nExiting example...')
-        self.set_neutral()
+        try:
+            self.set_neutral()
+        except BaseException:
+            pass
         if self._rs.state().enabled:
             print('Disabling robot...')
             self._rs.disable(self._node)
@@ -71,7 +74,7 @@ class Wobbler(object):
         """
         Sets the head back into a neutral pose
         """
-        self._head.set_pan(0.0)
+        self._head.set_pan(0.0, timeout=0)
 
     def wobble(self):
         """

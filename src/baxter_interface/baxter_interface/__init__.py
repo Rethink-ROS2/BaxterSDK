@@ -33,7 +33,7 @@ from .camera import CameraController as CameraController
 from .head import Head as Head
 
 # from .limb import Limb
-# from .navigator import Navigator
+from .navigator import Navigator as Navigator
 from .robot_enable import RobotEnable as RobotEnable
 
 # from .robust_controller import RobustController
