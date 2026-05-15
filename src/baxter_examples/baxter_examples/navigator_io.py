@@ -29,6 +29,7 @@
 
 import argparse
 import sys
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -78,10 +79,9 @@ class NavigatorIO(object):
 
         print('Press input buttons on the left navigator, input will be echoed here.')
 
-        i = 0
-        while rclpy.ok() and i < 100:
+        end_time = time.time() + 10.0
+        while rclpy.ok() and time.time() < end_time:
             rclpy.spin_once(self._node, timeout_sec=0.1)
-            i += 1
 
 
 def main():
