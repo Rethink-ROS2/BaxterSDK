@@ -28,6 +28,7 @@ setup(
             'xdisplay_image = baxter_examples.xdisplay_image:main',
             'head_wobbler = baxter_examples.head_wobbler:main',
             'navigator_io = baxter_examples.navigator_io:main',
+            'gripper_cuff_control = baxter_examples.gripper_cuff_control:main',
         ],
     },
 )

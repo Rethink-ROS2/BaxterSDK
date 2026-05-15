@@ -29,7 +29,7 @@ from .analog_io import AnalogIO as AnalogIO
 from .camera import CameraController as CameraController
 
 # from .digital_io import DigitalIO
-# from .gripper import Gripper
+from .gripper import Gripper as Gripper
 from .head import Head as Head
 
 # from .limb import Limb
