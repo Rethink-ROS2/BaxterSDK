@@ -30,36 +30,37 @@ import errno
 import baxter_dataflow
 import rclpy.node as Node
 from baxter_core_msgs.msg import (
-    AnalogIOState,
-    AnalogOutputCommand,
+    DigitalIOState,
+    DigitalOutputCommand,
 )
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 
-class AnalogIO(object):
+class DigitalIO(object):
     """
-    Interface class for a simple Analog Input and/or Output on the
-    Baxter robot.
+    Interface class for a simple Digital Input and/or Output on the
+    Baxter robot
 
     Input
       - read input state
     Output
-      - set new output state
+      - turn output On/Off
       - read current output state
     """
 
-    def __init__(self, node: Node, component_id: str):
+    def __init__(self, component_id: str, node: Node):
         """
         Constructor.
 
-        @param component_id: unique id of analog component
+        @param component_id: unique id of the digital component
         """
         self._node = node
         self._id = component_id
-        self._component_type = 'analog_io'
+        self._component_type = 'digital_io'
         self._is_output = False
+        self._state = None
 
-        self._state = dict()
+        self.state_changed = baxter_dataflow.Signal()
 
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id
@@ -70,51 +71,77 @@ class AnalogIO(object):
             depth=1,
         )
 
-        self._sub_state = self._node.create_subscription(AnalogIOState, topic_base + '/state', self._on_io_state, qos)
+        self._sub_state = self._node.create_subscription(
+            DigitalIOState,
+            topic_base + '/state',
+            self._on_io_state,
+            qos=qos,
+        )
 
         baxter_dataflow.wait_for(
-            node,
-            lambda: len(self._state.keys()) != 0,
+            self._node,
+            lambda: self._state is not None,
             timeout=2.0,
-            timeout_msg=f'Failed to get current analog_io state from {topic_base}',
+            timeout_msg=f'Failed to get current digital_io state from {topic_base}',
         )
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = self._node.create_publisher(AnalogOutputCommand, type_ns + '/command', qos)
+            self._pub_output = self._node.create_publisher(DigitalOutputCommand, type_ns + '/command', qos=qos)
 
     def _on_io_state(self, msg):
         """
-        Updates the internally stored state of the Analog Input/Output.
+        Updates the internally stored state of the Digital Input/Output.
         """
-        self._is_output = not msg.is_input_only
-        self._state['value'] = msg.value
+        new_state = msg.state == DigitalIOState.PRESSED
+        if self._state is None:
+            self._is_output = not msg.is_input_only
+        old_state = self._state
+        self._state = new_state
 
-    def state(self):
-        """
-        Return the latest value of the Analog Input/Output.
-        """
-        return self._state['value']
+        # trigger signal if changed
+        if old_state is not None and old_state != new_state:
+            self.state_changed(new_state)
 
+    @property
     def is_output(self):
         """
         Accessor to check if IO is capable of output.
         """
         return self._is_output
 
+    @property
+    def state(self):
+        """
+        Current state of the Digital Input/Output.
+        """
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        """
+        Control the state of the Digital Output. (is_output must be True)
+
+        @type value: bool
+        @param value: new state to output {True, False}
+        """
+        self.set_output(value)
+
     def set_output(self, value, timeout=2.0):
         """
-        Control the state of the Analog Output.
+        Control the state of the Digital Output.
 
-        @type value: uint16
-        @param value: new state of the Output.
+        Use this function for finer control over the wait_for timeout.
+
+        @type value: bool
+        @param value: new state {True, False} of the Output.
         @type timeout: float
         @param timeout: Seconds to wait for the io to reflect command.
                         If 0, just command once and return. [0]
         """
         if not self._is_output:
             raise IOError(errno.EACCES, f'Component is not an output [{self._component_type}: {self._id}]')
-        cmd = AnalogOutputCommand()
+        cmd = DigitalOutputCommand()
         cmd.name = self._id
         cmd.value = value
         self._pub_output.publish(cmd)
@@ -122,9 +149,9 @@ class AnalogIO(object):
         if not timeout == 0:
             baxter_dataflow.wait_for(
                 self._node,
-                test=lambda: self.state() == value,
+                test=lambda: self.state == value,
                 timeout=timeout,
                 rate=100,
-                timeout_msg=(f'Failed to command analog io to: {(value,)}'),
+                timeout_msg=(f'Failed to command digital io to: {value}'),
                 body=lambda: self._pub_output.publish(cmd),
             )
