@@ -40,10 +40,10 @@ class NavigatorIO(object):
     def __init__(self, node: Node):
         self._node = node
         self._navs = (
-            baxter_interface.Navigator(self._node, 'left'),
-            baxter_interface.Navigator(self._node, 'right'),
-            baxter_interface.Navigator(self._node, 'torso_left'),
-            baxter_interface.Navigator(self._node, 'torso_right'),
+            baxter_interface.Navigator('left', self._node),
+            baxter_interface.Navigator('right', self._node),
+            baxter_interface.Navigator('torso_left', self._node),
+            baxter_interface.Navigator('torso_right', self._node),
         )
 
     def blink(self):
@@ -70,7 +70,7 @@ class NavigatorIO(object):
         def wheel_moved(v):
             print('Wheel Increment: %d, New Value: %s' % (v, nav.wheel))
 
-        nav = baxter_interface.Navigator(self._node, 'left')
+        nav = baxter_interface.Navigator('left', self._node)
         nav.button0_changed.connect(b0_pressed)
         nav.button1_changed.connect(b1_pressed)
         nav.button2_changed.connect(b2_pressed)
