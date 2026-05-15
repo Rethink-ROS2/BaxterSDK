@@ -78,10 +78,9 @@ class NavigatorIO(object):
 
         print('Press input buttons on the left navigator, input will be echoed here.')
 
-        rate = self._node.create_rate(1)
         i = 0
-        while rclpy.ok() and i < 10:
-            rate.sleep()
+        while rclpy.ok() and i < 100:
+            rclpy.spin_once(self._node, timeout_sec=0.1)
             i += 1
 
 
