@@ -75,7 +75,7 @@ class DigitalIO(object):
             DigitalIOState,
             topic_base + '/state',
             self._on_io_state,
-            qos=qos,
+            qos,
         )
 
         baxter_dataflow.wait_for(
@@ -87,7 +87,7 @@ class DigitalIO(object):
 
         # check if output-capable before creating publisher
         if self._is_output:
-            self._pub_output = self._node.create_publisher(DigitalOutputCommand, type_ns + '/command', qos=qos)
+            self._pub_output = self._node.create_publisher(DigitalOutputCommand, type_ns + '/command', qos)
 
     def _on_io_state(self, msg):
         """

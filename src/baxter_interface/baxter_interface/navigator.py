@@ -83,15 +83,15 @@ class Navigator(object):
         self.button2_changed = baxter_dataflow.Signal()
         self.wheel_changed = baxter_dataflow.Signal()
 
-        qos = QoSProfile(ReliabilityPolicy.RELIABLE, HistoryPolicy.KEEP_LAST, depth=1)
+        qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE, history=HistoryPolicy.KEEP_LAST, depth=1)
 
         nav_state_topic = 'robot/navigators/{0}_navigator/state'.format(self._id)
         self._state_sub = self._node.create_subscription(NavigatorState, nav_state_topic, self._on_state, qos)
 
-        self._inner_led = digital_io.DigitalIO(f'{self.id}_inner_light')
+        self._inner_led = digital_io.DigitalIO(f'{self._id}_inner_light', node)
         self._inner_led_idx = 0
 
-        self._outer_led = digital_io.DigitalIO(f'{self.id}_outer_light')
+        self._outer_led = digital_io.DigitalIO(f'{self._id}_outer_light', node)
         self._outer_led_idx = 1
 
         init_err_msg = f'Navigator init failed to get current state from {nav_state_topic}'
