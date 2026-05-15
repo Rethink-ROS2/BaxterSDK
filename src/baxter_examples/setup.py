@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'analog_io_rampup = baxter_examples.analog_io_rampup:main',
             'xdisplay_image = baxter_examples.xdisplay_image:main',
+            'head_wobbler = baxter_examples.head_wobbler:main',
         ],
     },
 )
