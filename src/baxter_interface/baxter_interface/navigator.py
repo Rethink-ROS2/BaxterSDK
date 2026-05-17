@@ -29,6 +29,7 @@ import baxter_dataflow
 from baxter_core_msgs.msg import (
     NavigatorState,
 )
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
@@ -78,6 +79,7 @@ class Navigator(object):
         self._node = node
         self._id = location
         self._state = None
+        self._callback_group = MutuallyExclusiveCallbackGroup()
         self.button0_changed = baxter_dataflow.Signal()
         self.button1_changed = baxter_dataflow.Signal()
         self.button2_changed = baxter_dataflow.Signal()
@@ -86,7 +88,9 @@ class Navigator(object):
         qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE, history=HistoryPolicy.KEEP_LAST, depth=1)
 
         nav_state_topic = 'robot/navigators/{0}_navigator/state'.format(self._id)
-        self._state_sub = self._node.create_subscription(NavigatorState, nav_state_topic, self._on_state, qos)
+        self._state_sub = self._node.create_subscription(
+            NavigatorState, nav_state_topic, self._on_state, qos, callback_group=self._callback_group
+        )
 
         self._inner_led = digital_io.DigitalIO(f'{self._id}_inner_light', node)
         self._inner_led_idx = 0
@@ -140,7 +144,7 @@ class Navigator(object):
         @type enable: bool
         @param enable: True to enable the light, False otherwise
         """
-        self._inner_led.set_output(enable)
+        self._inner_led.set_output(enable, timeout=0)
 
     @property
     def outer_led(self):
@@ -157,7 +161,7 @@ class Navigator(object):
         @type enable: bool
         @param enable: True to enable the light, False otherwise
         """
-        self._outer_led.set_output(enable)
+        self._outer_led.set_output(enable, timeout=0)
 
     def _on_state(self, msg):
         if not self._state:

@@ -28,11 +28,12 @@
 import errno
 
 import baxter_dataflow
-import rclpy.node as Node
 from baxter_core_msgs.msg import (
     DigitalIOState,
     DigitalOutputCommand,
 )
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 
@@ -59,6 +60,7 @@ class DigitalIO(object):
         self._component_type = 'digital_io'
         self._is_output = False
         self._state = None
+        self._callback_group = MutuallyExclusiveCallbackGroup()
 
         self.state_changed = baxter_dataflow.Signal()
 
@@ -76,6 +78,7 @@ class DigitalIO(object):
             topic_base + '/state',
             self._on_io_state,
             qos,
+            callback_group=self._callback_group,
         )
 
         baxter_dataflow.wait_for(

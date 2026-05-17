@@ -26,6 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
+import time
 
 import rclpy
 
@@ -57,5 +58,8 @@ def wait_for(node, test, timeout=1.0, raise_on_error=True, rate=100, timeout_msg
             return False
         if callable(body):
             body()
-        rclpy.spin_once(node, timeout_sec=interval)
+        try:
+            rclpy.spin_once(node, timeout_sec=interval)
+        except RuntimeError:
+            time.sleep(interval)  # already inside a spinning executor; rely on it to deliver msgs
     return True

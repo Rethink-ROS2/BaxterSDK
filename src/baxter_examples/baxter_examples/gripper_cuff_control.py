@@ -70,7 +70,7 @@ class GripperConnect(object):
         if self._gripper.type() != 'custom':
             if not (self._gripper.calibrated() or self._gripper.calibrate()):
                 self._node.get_logger().warn(
-                    '%s (%s) calibration failed.', self._gripper.name.capitalize(), self._gripper.type()
+                    f'{self._gripper.name.capitalize()} ({self._gripper.type()}) calibration failed.'
                 )
         else:
             msg = ('%s (%s) not capable of gripper commands. Running cuff-light connection only.') % (
@@ -86,7 +86,7 @@ class GripperConnect(object):
         if lights:
             self._light_io.state_changed.connect(self._light_action)
 
-        self._node.get_logger().info('%s Cuff Control initialized...', self._gripper.name.capitalize())
+        self._node.get_logger().info(f'{self._gripper.name.capitalize()} Cuff Control initialized...')
 
     def _open_action(self, value):
         if value and self._is_grippable():
@@ -110,7 +110,7 @@ class GripperConnect(object):
         if self._gripper.calibrated():
             return True
         elif value == 'electric':
-            self._node.get_logger().info('calibrating %s...', self._gripper.name.capitalize())
+            self._node.get_logger().info(f'calibrating {self._gripper.name.capitalize()}...')
             return self._gripper.calibrate()
         else:
             return False

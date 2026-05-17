@@ -40,6 +40,7 @@ from baxter_core_msgs.msg import (
     EndEffectorProperties,
     EndEffectorState,
 )
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
@@ -98,6 +99,7 @@ class Gripper(object):
         )
 
         self._parameters = dict()
+        self._callback_group = MutuallyExclusiveCallbackGroup()
 
         self._cmd_pub = self._node.create_publisher(EndEffectorCommand, ns + 'command', qos)
 
@@ -106,11 +108,15 @@ class Gripper(object):
         self._state_pub = self._node.create_publisher(EndEffectorState, ns + 'rsdk/set_state', gripper_qos)
 
         self._state_sub = self._node.create_subscription(
-            EndEffectorState, ns + 'state', self._on_gripper_state, gripper_qos
+            EndEffectorState, ns + 'state', self._on_gripper_state, gripper_qos, callback_group=self._callback_group
         )
 
         self._prop_sub = self._node.create_subscription(
-            EndEffectorProperties, ns + 'properties', self._on_gripper_prop, gripper_qos
+            EndEffectorProperties,
+            ns + 'properties',
+            self._on_gripper_prop,
+            gripper_qos,
+            callback_group=self._callback_group,
         )
 
         # Wait for the gripper state message to be populated
@@ -178,17 +184,9 @@ class Gripper(object):
                 float_time = time.mktime(time.strptime(version_str, time_format))
             except ValueError:
                 self._node.get_logger().error(
-                    (
-                        "%s %s - The Gripper's %s "
-                        'timestamp does not meet python time formating '
-                        'requirements: %s does not map '
-                        "to '%s'"
-                    ),
-                    self.name,
-                    self.type(),
-                    version_type,
-                    version_str,
-                    time_format,
+                    f"{self.name} {self.type()} - The Gripper's {version_type} "
+                    f'timestamp does not meet python time formating '
+                    f"requirements: {version_str} does not map to '{time_format}'"
                 )
                 sys.exit(1)
         return float_time
@@ -207,13 +205,11 @@ class Gripper(object):
         sdk_version = settings.SDK_VERSION
         firmware_date_str = self.firmware_build_date()
         if self.type() != 'electric':
-            self._node.get_logger().warn(
-                '%s %s (%s): Version Check not needed', self.name, self.type(), firmware_date_str
-            )
+            self._node.get_logger().warn(f'{self.name} {self.type()} ({firmware_date_str}): Version Check not needed')
             return True
         if not firmware_date_str:
             self._node.get_logger().error(
-                '%s %s: Failed to retrieve version string during Version Check.', self.name, self.type()
+                f'{self.name} {self.type()}: Failed to retrieve version string during Version Check.'
             )
             return False
         firmware_time = self._version_str_to_time(firmware_date_str, 'current firmware')
@@ -227,26 +223,16 @@ class Gripper(object):
             return True
         elif firmware_time <= warn_time and firmware_time > fail_time:
             self._node.get_logger().warn(
-                '%s %s: Gripper Firmware version built on date (%s) '
-                'is not up-to-date for SDK Version (%s). Please use '
-                "the Robot's Field-Service-Menu to Upgrade your "
-                'Gripper Firmware.',
-                self.name,
-                self.type(),
-                firmware_date_str,
-                sdk_version,
+                f'{self.name} {self.type()}: Gripper Firmware version built on date ({firmware_date_str}) '
+                f'is not up-to-date for SDK Version ({sdk_version}). Please use '
+                "the Robot's Field-Service-Menu to Upgrade your Gripper Firmware."
             )
             return True
         elif firmware_time <= fail_time and firmware_time > 0.0:
             self._node.get_logger().error(
-                '%s %s: Gripper Firmware version built on date (%s) '
-                'is *incompatible* with SDK Version (%s). Please use '
-                "the Robot's Field-Service-Menu to Upgrade your "
-                'Gripper Firmware.',
-                self.name,
-                self.type(),
-                firmware_date_str,
-                sdk_version,
+                f'{self.name} {self.type()}: Gripper Firmware version built on date ({firmware_date_str}) '
+                f'is *incompatible* with SDK Version ({sdk_version}). Please use '
+                "the Robot's Field-Service-Menu to Upgrade your Gripper Firmware."
             )
             return False
         else:
@@ -258,15 +244,10 @@ class Gripper(object):
                 return True
             else:
                 self._node.get_logger().error(
-                    '%s %s: Gripper Firmware version built on '
-                    'date (%s) does not fall within any known Gripper '
-                    'Firmware Version dates for SDK (%s). Use the '
-                    "Robot's Field-Service-Menu to Upgrade your Gripper "
-                    'Firmware.',
-                    self.name,
-                    self.type(),
-                    firmware_date_str,
-                    sdk_version,
+                    f'{self.name} {self.type()}: Gripper Firmware version built on '
+                    f'date ({firmware_date_str}) does not fall within any known Gripper '
+                    f'Firmware Version dates for SDK ({sdk_version}). Use the '
+                    "Robot's Field-Service-Menu to Upgrade your Gripper Firmware."
                 )
                 return False
 
