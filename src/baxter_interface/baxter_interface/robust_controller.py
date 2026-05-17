@@ -53,7 +53,7 @@ class RobustController(object):
 
         self._command_pub = self._node.create_publisher(type(enable_msg), namespace + '/enable', qos)
 
-        self._status_sub = self._node.create_subcriber(
+        self._status_sub = self._node.create_subscription(
             RobustControllerStatus, namespace + '/status', self._callback, qos
         )
 

@@ -128,7 +128,7 @@ and resolvable.
             node.get_logger().error(error_estop)
             raise IOError(errno.EREMOTEIO, 'Failed to Reset: E-Stop Engaged')
 
-        node.get_logeer().info('Resetting robot...')
+        node.get_logger().info('Resetting robot...')
         try:
             baxter_dataflow.wait_for(node, test=is_reset, timeout=3.0, timeout_msg=error_env, body=pub.publish)
         except OSError as e:

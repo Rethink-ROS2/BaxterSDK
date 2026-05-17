@@ -26,12 +26,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from .analog_io import AnalogIO as AnalogIO
+from .base import BaxterInterface as BaxterInterface
+from .base import BaxterNode as BaxterNode
 from .camera import CameraController as CameraController
 from .digital_io import DigitalIO as DigitalIO
 from .gripper import Gripper as Gripper
 from .head import Head as Head
-
-# from .limb import Limb
+from .limb import Limb as Limb
 from .navigator import Navigator as Navigator
 from .robot_enable import RobotEnable as RobotEnable
 
