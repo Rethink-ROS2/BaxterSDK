@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="robot_state_publisher" exec="robot_state_publisher" name="robot_state_publisher">
+    <param name="robot_description"
+           value="$(command 'xacro $(find-pkg-share baxter_description)/urdf/baxter.urdf.xacro')"/>
+    <remap from="/joint_states" to="/robot/joint_states"/>
+  </node>
+</launch>

@@ -177,7 +177,7 @@ class Tuck(object):
             self._enforce_rate(loop_start)
 
         if any(self._arm_state['collide'].values()):
-            self._rs.disable()
+            self._rs.disable(self._node)
         return
 
     def supervised_tuck(self):
