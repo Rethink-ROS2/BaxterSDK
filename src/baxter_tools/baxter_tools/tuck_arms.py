@@ -37,23 +37,17 @@ from copy import deepcopy
 import rclpy
 from baxter_core_msgs.msg import CollisionAvoidanceState
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Bool, Empty
 
 import baxter_interface
 from baxter_interface import BaxterInterface, BaxterNode
 
 _TUCK_RATE_SEC = 1.0 / 20.0
+_TUCK_SPINS = 5  # spin_once calls per control cycle to keep all callbacks fresh
 
 _COLLISION_QOS = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
-    history=HistoryPolicy.KEEP_LAST,
-    depth=1,
-)
-
-_LATCH_QOS = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.TRANSIENT_LOCAL,
     history=HistoryPolicy.KEEP_LAST,
     depth=1,
 )
@@ -100,15 +94,21 @@ class Tuck(BaxterInterface):
             _COLLISION_QOS,
         )
 
+        _suppress_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
         self._disable_pub = {
-            'left': node.create_publisher(Empty, 'robot/limb/left/suppress_collision_avoidance', _LATCH_QOS),
-            'right': node.create_publisher(Empty, 'robot/limb/right/suppress_collision_avoidance', _LATCH_QOS),
+            'left': node.create_publisher(Empty, 'robot/limb/left/suppress_collision_avoidance', _suppress_qos),
+            'right': node.create_publisher(Empty, 'robot/limb/right/suppress_collision_avoidance', _suppress_qos),
         }
-        self._enable_pub = node.create_publisher(Bool, 'robot/set_super_enable', _LATCH_QOS)
+        self._enable_pub = node.create_publisher(Bool, 'robot/set_super_enable', 10)
         self._rs = baxter_interface.RobotEnable(node)
 
     def _update_collision(self, data, limb):
         self._arm_state['collide'][limb] = len(data.collision_object) > 0
+        self._arm_state.setdefault('collide_objects', {})[limb] = list(data.collision_object)
         self._check_arm_state()
 
     def _check_arm_state(self):
@@ -150,31 +150,66 @@ class Tuck(BaxterInterface):
             if not self._rs.state().enabled:
                 self._enable_pub.publish(Bool(data=True))
             head.set_pan(0.0, 0.5, timeout=0)
-            rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC)
+            for _ in range(_TUCK_SPINS):
+                rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC / _TUCK_SPINS)
 
         if start_disabled:
             while self._rs.state().enabled and rclpy.ok():
                 [pub.publish(Empty()) for pub in self._disable_pub.values()]
                 self._enable_pub.publish(Bool(data=False))
-                rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC)
+                for _ in range(_TUCK_SPINS):
+                    rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC / _TUCK_SPINS)
 
     def _move_to(self, tuck, disabled):
-        if any(disabled.values()):
-            [pub.publish(Empty()) for pub in self._disable_pub.values()]
-        while any(self._arm_state['tuck'][limb] != goal for limb, goal in tuck.items()) and rclpy.ok():
-            if not self._rs.state().enabled:
-                self._enable_pub.publish(Bool(data=True))
-            for limb in self._limbs:
-                if disabled[limb]:
-                    self._disable_pub[limb].publish(Empty())
-                if limb in tuck:
-                    self._arms[limb].set_joint_positions(
-                        dict(zip(self._arms[limb].joint_names(), self._joint_moves[tuck[limb]][limb]))
-                    )
-            self._check_arm_state()
-            rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC)
+        log = self._node.get_logger()
+        log.info(f'_move_to: tuck={tuck} disabled={disabled}')
 
+        # Timer fires during every spin_once call, including those inside
+        # _rs.enable()'s internal wait_for loop, so suppress is never interrupted.
+        suppress_timer = None
+        if any(disabled.values()):
+
+            def _publish_suppress():
+                for limb, dis in disabled.items():
+                    if dis:
+                        self._disable_pub[limb].publish(Empty())
+
+            suppress_timer = self._node.create_timer(_TUCK_RATE_SEC, _publish_suppress)
+            _publish_suppress()
+
+        try:
+            iters = 0
+            while any(self._arm_state['tuck'][limb] != goal for limb, goal in tuck.items()) and rclpy.ok():
+                enabled = self._rs.state().enabled
+                if not enabled:
+                    self._rs.enable(self._node)
+                for limb in self._limbs:
+                    if limb in tuck:
+                        self._arms[limb].set_joint_positions(
+                            dict(zip(self._arms[limb].joint_names(), self._joint_moves[tuck[limb]][limb]))
+                        )
+                for _ in range(_TUCK_SPINS):
+                    rclpy.spin_once(self._node, timeout_sec=_TUCK_RATE_SEC / _TUCK_SPINS)
+                self._check_arm_state()
+                iters += 1
+                if iters % 20 == 0:
+                    for limb in self._limbs:
+                        s0 = self._arms[limb].joint_angle(f'{limb}_s0')
+                        s1 = self._arms[limb].joint_angle(f'{limb}_s1')
+                        log.info(
+                            f'  [{limb}] s0={s0:.3f} s1={s1:.3f} '
+                            f'tuck={self._arm_state["tuck"][limb]} '
+                            f'collide={self._arm_state["collide"][limb]}'
+                        )
+                    log.info(f'  enabled={enabled} iters={iters}')
+        finally:
+            if suppress_timer is not None:
+                suppress_timer.cancel()
+                self._node.destroy_timer(suppress_timer)
+
+        log.info(f'_move_to done: arm_state={self._arm_state} iters={iters}')
         if any(self._arm_state['collide'].values()):
+            log.info('Collision detected — disabling robot')
             self._rs.disable(self._node)
 
     def supervised_tuck(self):

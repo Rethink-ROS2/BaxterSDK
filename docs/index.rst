@@ -8,6 +8,7 @@ A ROS 2 port of the Baxter robot SDK originally developed by Rethink Robotics.
    :caption: Getting Started
 
    installation
+   patterns
 
 .. toctree::
    :maxdepth: 2

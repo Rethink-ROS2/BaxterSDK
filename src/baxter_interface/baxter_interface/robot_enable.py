@@ -130,7 +130,9 @@ and resolvable.
 
         node.get_logger().info('Resetting robot...')
         try:
-            baxter_dataflow.wait_for(node, test=is_reset, timeout=3.0, timeout_msg=error_env, body=pub.publish)
+            baxter_dataflow.wait_for(
+                node, test=is_reset, timeout=3.0, timeout_msg=error_env, body=lambda: pub.publish(Empty())
+            )
         except OSError as e:
             if e.errno == errno.ETIMEDOUT:
                 if self._state.error and not self._state.stopped:
@@ -149,6 +151,6 @@ and resolvable.
             test=lambda: self._state.stopped,
             timeout=3.0,
             timeout_msg='Failed to stop the robot',
-            body=pub.publish,
+            body=lambda: pub.publish(Empty()),
         )
         node.get_logger().info('Robot Stopped')
