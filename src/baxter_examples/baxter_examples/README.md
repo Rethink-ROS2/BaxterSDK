@@ -112,3 +112,8 @@ In ROS 2, one-shot example scripts don't need this. Just name the node directly:
 ```python
 node = rclpy.create_node('rsdk_analog_io_rampup')
 ```
+
+### Installing Joystick in Kilted
+sudo apt-get install ros-kilted-joy
+
+ros2 launch baxter_examples joint_position_joystick.launch.xml joystick:=xbox

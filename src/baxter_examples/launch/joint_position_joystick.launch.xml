@@ -1,0 +1,19 @@
+<launch>
+
+  <!-- Joystick Type Argument: {xbox, ps3, logitech} -->
+  <arg name="joystick" />
+
+  <!-- Joystick Device Argument -->
+  <arg name="dev" default="/dev/input/js0" />
+
+  <!-- Start the Joy Node -->
+  <node pkg="joy" exec="joy_node" name="joy_node" output="screen">
+    <param name="dev" value="$(var dev)" />
+  </node>
+
+  <!-- Run the Joint Position Joystick Example -->
+  <node pkg="baxter_examples" exec="joint_position_joystick"
+        name="rsdk_joint_position_joystick" output="screen"
+        args="--joystick $(var joystick)" />
+
+</launch>

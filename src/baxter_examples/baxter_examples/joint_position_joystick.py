@@ -27,27 +27,21 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Baxter RSDK Joint Position Example: joystick
-"""
-
-from __future__ import print_function
+"""Baxter RSDK Joint Position Example: joystick"""
 
 import argparse
+import sys
+
+import rclpy
+from rclpy.utilities import remove_ros_args
 
 import baxter_external_devices
-import rclpy
-
 import baxter_interface
-from baxter_interface import CHECK_VERSION
+from baxter_interface import BaxterNode
 
 
 def rotate(lst):
-    """
-    Rotates a list left.
-
-    @param lst: the list
-    """
+    """Rotates a list left."""
     if len(lst):
         v = lst[0]
         lst[:-1] = lst[1:]
@@ -55,101 +49,12 @@ def rotate(lst):
 
 
 def set_j(cmd, limb, joints, index, delta):
-    """
-    Set the selected joint to current pos + delta.
-
-    @param cmd: the joint command dictionary
-    @param limb: the limb to get the pos from
-    @param joints: a list of joint names
-    @param index: the index in the list of names
-    @param delta: delta to update the joint by
-
-    joint/index is to make this work in the bindings.
-    """
+    """Set the selected joint to current pos + delta."""
     joint = joints[index]
     cmd[joint] = delta + limb.joint_angle(joint)
 
 
-def map_joystick(joystick):
-    """
-    Maps joystick input to joint position commands.
-
-    @param joystick: an instance of a Joystick
-    """
-    left = baxter_interface.Limb('left')
-    right = baxter_interface.Limb('right')
-    grip_left = baxter_interface.Gripper('left', CHECK_VERSION)
-    grip_right = baxter_interface.Gripper('right', CHECK_VERSION)
-    lcmd = {}
-    rcmd = {}
-
-    # available joints
-    lj = left.joint_names()
-    rj = right.joint_names()
-
-    # abbreviations
-    def jhi(s):
-        return joystick.stick_value(s) > 0
-
-    def jlo(s):
-        return joystick.stick_value(s) < 0
-
-    bdn = joystick.button_down
-    bup = joystick.button_up
-
-    def print_help(bindings_list):
-        print('Press Ctrl-C to quit.')
-        for bindings in bindings_list:
-            for test, _cmd, doc in bindings:
-                if callable(doc):
-                    doc = doc()
-                print('%s: %s' % (str(test[1][0]), doc))
-
-    bindings_list = []
-    bindings = (
-        ((bdn, ['rightTrigger']), (grip_left.close, []), 'left gripper close'),
-        ((bup, ['rightTrigger']), (grip_left.open, []), 'left gripper open'),
-        ((bdn, ['leftTrigger']), (grip_right.close, []), 'right gripper close'),
-        ((bup, ['leftTrigger']), (grip_right.open, []), 'right gripper open'),
-        ((jlo, ['leftStickHorz']), (set_j, [rcmd, right, rj, 0, 0.1]), lambda: 'right inc ' + rj[0]),
-        ((jhi, ['leftStickHorz']), (set_j, [rcmd, right, rj, 0, -0.1]), lambda: 'right dec ' + rj[0]),
-        ((jlo, ['rightStickHorz']), (set_j, [lcmd, left, lj, 0, 0.1]), lambda: 'left inc ' + lj[0]),
-        ((jhi, ['rightStickHorz']), (set_j, [lcmd, left, lj, 0, -0.1]), lambda: 'left dec ' + lj[0]),
-        ((jlo, ['leftStickVert']), (set_j, [rcmd, right, rj, 1, 0.1]), lambda: 'right inc ' + rj[1]),
-        ((jhi, ['leftStickVert']), (set_j, [rcmd, right, rj, 1, -0.1]), lambda: 'right dec ' + rj[1]),
-        ((jlo, ['rightStickVert']), (set_j, [lcmd, left, lj, 1, 0.1]), lambda: 'left inc ' + lj[1]),
-        ((jhi, ['rightStickVert']), (set_j, [lcmd, left, lj, 1, -0.1]), lambda: 'left dec ' + lj[1]),
-        ((bdn, ['rightBumper']), (rotate, [lj]), 'left: cycle joint'),
-        ((bdn, ['leftBumper']), (rotate, [rj]), 'right: cycle joint'),
-        ((bdn, ['btnRight']), (grip_left.calibrate, []), 'left calibrate'),
-        ((bdn, ['btnLeft']), (grip_right.calibrate, []), 'right calibrate'),
-        ((bdn, ['function1']), (print_help, [bindings_list]), 'help'),
-        ((bdn, ['function2']), (print_help, [bindings_list]), 'help'),
-    )
-    bindings_list.append(bindings)
-
-    rate = rclpy.create_rate(100)
-    print_help(bindings_list)
-    print('Press Ctrl-C to stop. ')
-    while rclpy.ok():
-        for test, cmd, doc in bindings:
-            if test[0](*test[1]):
-                cmd[0](*cmd[1])
-                if callable(doc):
-                    print(doc())
-                else:
-                    print(doc)
-        if len(lcmd):
-            left.set_joint_positions(lcmd)
-            lcmd.clear()
-        if len(rcmd):
-            right.set_joint_positions(rcmd)
-            rcmd.clear()
-        rate.sleep()
-    return False
-
-
-def main():
+class JointPositionJoystick(BaxterNode):
     """RSDK Joint Position Example: Joystick Control
 
     Use a game controller to control the angular joint positions
@@ -158,19 +63,125 @@ def main():
     Attach a game controller to your dev machine and run this
     example along with the ROS joy_node to control the position
     of each joint in Baxter's arms using the joysticks. Be sure to
-    provide your *joystick* type to setup appropriate key mappings.
+    provide your *joystick* type to setup appropriate key bindings.
 
     Each stick axis maps to a joint angle; which joints are currently
     controlled can be incremented by using the mapped increment buttons.
     Ex:
       (x,y -> e0,e1) >>increment>> (x,y -> e1,e2)
     """
+
+    def __init__(self, joystick_type: str):
+        super().__init__('rsdk_joint_position_joystick')
+        self._left = baxter_interface.Limb(self, 'left')
+        self._right = baxter_interface.Limb(self, 'right')
+        self._grip_left = baxter_interface.Gripper('left', False, self)
+        self._grip_right = baxter_interface.Gripper('right', False, self)
+        self._rs = baxter_interface.RobotEnable(self)
+
+        if joystick_type == 'xbox':
+            self._joystick = baxter_external_devices.joystick.XboxController(self)
+        elif joystick_type == 'logitech':
+            self._joystick = baxter_external_devices.joystick.LogitechController(self)
+        elif joystick_type == 'ps3':
+            self._joystick = baxter_external_devices.joystick.PS3Controller(self)
+
+    def run(self):
+        self.get_logger().info('Getting robot state...')
+        self._init_state = self._rs.state().enabled
+
+        self.get_logger().info('Enabling robot...')
+        self._rs.enable(self)
+
+        self._map_joystick()
+        self.get_logger().info('Done.')
+
+    def on_shutdown(self):
+        if not self._init_state:
+            self.get_logger().info('Disabling robot...')
+            self._rs.disable(self)
+
+    def _map_joystick(self):
+        """Maps joystick input to joint position commands."""
+        left = self._left
+        right = self._right
+        grip_left = self._grip_left
+        grip_right = self._grip_right
+        lcmd = {}
+        rcmd = {}
+
+        lj = left.joint_names()
+        rj = right.joint_names()
+
+        def jhi(s):
+            return self._joystick.stick_value(s) > 0
+
+        def jlo(s):
+            return self._joystick.stick_value(s) < 0
+
+        bdn = self._joystick.button_down
+        bup = self._joystick.button_up
+
+        def print_help(bindings_list):
+            print('Press Ctrl-C to quit.')
+            for bindings in bindings_list:
+                for test, _cmd, doc in bindings:
+                    if callable(doc):
+                        doc = doc()
+                    print('%s: %s' % (str(test[1][0]), doc))
+
+        bindings_list = []
+        bindings = (
+            ((bdn, ['rightTrigger']), (grip_left.close, []), 'left gripper close'),
+            ((bup, ['rightTrigger']), (grip_left.open, []), 'left gripper open'),
+            ((bdn, ['leftTrigger']), (grip_right.close, []), 'right gripper close'),
+            ((bup, ['leftTrigger']), (grip_right.open, []), 'right gripper open'),
+            ((jlo, ['leftStickHorz']), (set_j, [rcmd, right, rj, 0, 0.1]), lambda: 'right inc ' + rj[0]),
+            ((jhi, ['leftStickHorz']), (set_j, [rcmd, right, rj, 0, -0.1]), lambda: 'right dec ' + rj[0]),
+            ((jlo, ['rightStickHorz']), (set_j, [lcmd, left, lj, 0, 0.1]), lambda: 'left inc ' + lj[0]),
+            ((jhi, ['rightStickHorz']), (set_j, [lcmd, left, lj, 0, -0.1]), lambda: 'left dec ' + lj[0]),
+            ((jlo, ['leftStickVert']), (set_j, [rcmd, right, rj, 1, 0.1]), lambda: 'right inc ' + rj[1]),
+            ((jhi, ['leftStickVert']), (set_j, [rcmd, right, rj, 1, -0.1]), lambda: 'right dec ' + rj[1]),
+            ((jlo, ['rightStickVert']), (set_j, [lcmd, left, lj, 1, 0.1]), lambda: 'left inc ' + lj[1]),
+            ((jhi, ['rightStickVert']), (set_j, [lcmd, left, lj, 1, -0.1]), lambda: 'left dec ' + lj[1]),
+            ((bdn, ['rightBumper']), (rotate, [lj]), 'left: cycle joint'),
+            ((bdn, ['leftBumper']), (rotate, [rj]), 'right: cycle joint'),
+            ((bdn, ['btnRight']), (grip_left.calibrate, []), 'left calibrate'),
+            ((bdn, ['btnLeft']), (grip_right.calibrate, []), 'right calibrate'),
+            ((bdn, ['function1']), (print_help, [bindings_list]), 'help'),
+            ((bdn, ['function2']), (print_help, [bindings_list]), 'help'),
+        )
+        bindings_list.append(bindings)
+
+        print_help(bindings_list)
+        print('Press Ctrl-C to stop.')
+        while rclpy.ok():
+            for test, cmd, doc in bindings:
+                if test[0](*test[1]):
+                    cmd[0](*cmd[1])
+                    if callable(doc):
+                        print(doc())
+                    else:
+                        print(doc)
+            if len(lcmd):
+                left.set_joint_positions(lcmd)
+                lcmd.clear()
+            if len(rcmd):
+                right.set_joint_positions(rcmd)
+                rcmd.clear()
+            self.spin_rate(100)
+
+
+def main():
     epilog = """
-See help inside the example with the "Start" button for controller
-key bindings.
+See help inside the example with the "Start" button for controller key bindings.
     """
     arg_fmt = argparse.RawDescriptionHelpFormatter
-    parser = argparse.ArgumentParser(formatter_class=arg_fmt, description=main.__doc__, epilog=epilog)
+    parser = argparse.ArgumentParser(
+        formatter_class=arg_fmt,
+        description=JointPositionJoystick.__doc__,
+        epilog=epilog,
+    )
     required = parser.add_argument_group('required arguments')
     required.add_argument(
         '-j',
@@ -179,38 +190,8 @@ key bindings.
         choices=['xbox', 'logitech', 'ps3'],
         help='specify the type of joystick to use',
     )
-    args = parser.parse_args()
-
-    joystick = None
-    if args.joystick == 'xbox':
-        joystick = baxter_external_devices.joystick.XboxController()
-    elif args.joystick == 'logitech':
-        joystick = baxter_external_devices.joystick.LogitechController()
-    elif args.joystick == 'ps3':
-        joystick = baxter_external_devices.joystick.PS3Controller()
-    else:
-        parser.error("Unsupported joystick type '%s'" % (args.joystick))
-
-    print('Initializing node... ')
-    rclpy.init()
-    rclpy.init_node('rsdk_joint_position_joystick')
-    print('Getting robot state... ')
-    rs = baxter_interface.RobotEnable(CHECK_VERSION)
-    init_state = rs.state().enabled
-
-    def clean_shutdown():
-        print('\nExiting example.')
-        if not init_state:
-            print('Disabling robot...')
-            rs.disable()
-
-    rclpy.get_default_context().on_shutdown(clean_shutdown)
-
-    print('Enabling robot... ')
-    rs.enable()
-
-    map_joystick(joystick)
-    print('Done.')
+    args = parser.parse_args(remove_ros_args(sys.argv[1:]))
+    JointPositionJoystick.execute(joystick_type=args.joystick)
 
 
 if __name__ == '__main__':
