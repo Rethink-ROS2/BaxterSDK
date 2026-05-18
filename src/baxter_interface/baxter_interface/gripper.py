@@ -41,7 +41,6 @@ from baxter_core_msgs.msg import (
     EndEffectorState,
 )
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 from baxter_interface import settings
@@ -52,7 +51,7 @@ class Gripper(object):
     Interface class for a gripper on the Baxter Research Robot.
     """
 
-    def __init__(self, gripper, versioned=False, node=Node):
+    def __init__(self, gripper, versioned=False, node=None):
         """
         Version-checking capable constructor.
 
@@ -74,7 +73,7 @@ class Gripper(object):
         """
         self._node = node
         self.name = gripper + '_gripper'
-        self._cmd_sender = node.get_name() + '_%s'
+        self._cmd_sender = self._node.get_name() + '_%s'
         self._cmd_sequence = 0
 
         ns = 'robot/end_effector/' + self.name + '/'

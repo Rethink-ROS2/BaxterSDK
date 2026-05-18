@@ -53,7 +53,7 @@ class Limb(object):
     Point = collections.namedtuple('Point', ['x', 'y', 'z'])
     Quaternion = collections.namedtuple('Quaternion', ['x', 'y', 'z', 'w'])
 
-    def __init__(self, node: Node, limb):
+    def __init__(self, limb, node: Node):
         """
         Constructor.
 
@@ -433,7 +433,7 @@ class Limb(object):
             return joint_diff
 
         diffs = [genf(j, a) for j, a in positions.items() if j in self._joint_angle]
-
+        self._node.get_logger().info('Moving?')
         self.set_joint_positions(filtered_cmd())
         baxter_dataflow.wait_for(
             self._node,

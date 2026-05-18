@@ -49,8 +49,8 @@ class Tuck(object):
         self._done = False
         self._limbs = ('left', 'right')
         self._arms = {
-            'left': baxter_interface.Limb(node, 'left'),
-            'right': baxter_interface.Limb(node, 'right'),
+            'left': baxter_interface.Limb('left', node),
+            'right': baxter_interface.Limb('right', node),
         }
         self._tuck = tuck_cmd
         self._period = 1.0 / 20.0  # Exactly 20 Hz
