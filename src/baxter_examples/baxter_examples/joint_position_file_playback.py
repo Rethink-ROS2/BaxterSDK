@@ -35,7 +35,6 @@ from __future__ import print_function
 
 import argparse
 import sys
-import time
 
 import rclpy
 from rclpy.node import Node
@@ -46,6 +45,43 @@ import baxter_interface
 class JointPosePlayback:
     def __init__(self, node: Node):
         self._node = node
+        self._frames = []
+        self._frame_idx = 0
+        self._start_time = None
+        self._loop_count = 0
+        self._loops = 1
+        self._left = None
+        self._right = None
+        self._grip_left = None
+        self._grip_right = None
+        self._timer = None
+        self._lg_targets = []
+        self._rg_targets = []
+
+    @staticmethod
+    def _compute_gripper_targets(frames, key):
+        """Convert recorded position stream to stable open/close targets.
+
+        The recording captures actual gripper position during physical movement.
+        The controller only responds to stable endpoint targets (like cuff buttons),
+        not to rapidly changing intermediate positions. We detect open/close
+        transitions by watching when position crosses 50%.
+        """
+        targets = []
+        current = None
+        for _ts, cmd, _lcmd, _rcmd in frames:
+            pos = cmd.get(key)
+            if pos is None:
+                targets.append(current)
+                continue
+            if current is None:
+                current = 100.0 if pos >= 50.0 else 0.0
+            elif current == 100.0 and pos < 50.0:
+                current = 0.0
+            elif current == 0.0 and pos >= 50.0:
+                current = 100.0
+            targets.append(current)
+        return targets
 
     @staticmethod
     def try_float(x):
@@ -55,116 +91,98 @@ class JointPosePlayback:
             return None
 
     def clean_line(self, line, names):
-        """
-        Cleans a single line of recorded joint positions
-
-        @param line: the line described in a list to process
-        @param names: joint name keys
-        """
-        # convert the line of strings to a float or None
         line = [self.try_float(x) for x in line.rstrip().split(',')]
-        # zip the values with the joint names
         combined = zip(names[1:], line[1:])
-        # take out any tuples that have a none value
         cleaned = [x for x in combined if x[1] is not None]
-        # convert it to a dictionary with only valid commands
         command = dict(cleaned)
         left_command = dict((key, command[key]) for key in command.keys() if key[:-2] == 'left_')
         right_command = dict((key, command[key]) for key in command.keys() if key[:-2] == 'right_')
         return (command, left_command, right_command, line)
 
     def map_file(self, filename, loops=1):
-        """
-        Loops through csv file
-
-        @param filename: the file to play
-        @param loops: number of times to loop
-                    values < 0 mean 'infinite'
-
-        Does not loop indefinitely, but only until the file is read
-        and processed. Reads each line, split up in columns and
-        formats each line into a controller command in the form of
-        name/value pairs. Names come from the column headers
-        first column is the time stamp
-        """
         left = baxter_interface.Limb('left', node=self._node)
         right = baxter_interface.Limb('right', node=self._node)
         grip_left = baxter_interface.Gripper('left', node=self._node)
         grip_right = baxter_interface.Gripper('right', node=self._node)
 
-        if grip_left.error():
-            grip_left.reset()
-        if grip_right.error():
-            grip_right.reset()
-        if not grip_left.calibrated() and grip_left.type() != 'custom':
-            grip_left.calibrate()
-        if not grip_right.calibrated() and grip_right.type() != 'custom':
-            grip_right.calibrate()
+        if grip_left.type() != 'custom' and not grip_left.calibrated():
+            print('Left gripper is not calibrated. Run gripper calibration before playback.')
+            return False
 
         print('Playing back: %s' % (filename,))
         with open(filename, 'r') as f:
             lines = f.readlines()
         keys = lines[0].rstrip().split(',')
 
-        loop_count = 0
-        # If specified, repeat the file playback 'loops' number of times
-        while loops < 1 or loop_count < loops:
-            i = 0
-            loop_count += 1
-            print('Moving to start position...')
+        frames = []
+        for line in lines[1:]:
+            cmd, lcmd, rcmd, values = self.clean_line(line, keys)
+            frames.append((values[0], cmd, lcmd, rcmd))
 
-            _cmd, lcmd_start, rcmd_start, _raw = self.clean_line(lines[1], keys)
-            self._node.get_logger().info('Calling move_to_joint_positions for start...')
-            left.move_to_joint_positions(lcmd_start)
-            right.move_to_joint_positions(rcmd_start)
-            self._node.get_logger().info('move_to_joint_positions returned')
+        print('Moving to start position...')
+        left.move_to_joint_positions(frames[0][2])
+        right.move_to_joint_positions(frames[0][3])
 
-            ros_before = self._node.get_clock().now().nanoseconds / 1e9
-            wall_before = time.time()
-            time.sleep(0.1)
-            ros_after = self._node.get_clock().now().nanoseconds / 1e9
-            wall_after = time.time()
-            self._node.get_logger().info(
-                'Clock check: wall_elapsed=%.6f ros_elapsed=%.6f' % (wall_after - wall_before, ros_after - ros_before)
-            )
+        # Re-send CMD_CONFIGURE now that the bridge is established.
+        # The CMD_CONFIGURE sent in Gripper.__init__ is lost because DDS
+        # discovery hasn't completed yet at that point, so the gripper
+        # controller never gets configured and silently drops CMD_GO commands.
+        grip_left.set_parameters(defaults=True)
+        grip_right.set_parameters(defaults=True)
 
-            start_time = self._node.get_clock().now().nanoseconds / 1e9
-            self._node.get_logger().info(
-                'start_time=%.3f first_ts=%.6f last_ts=%.6f total_records=%d'
-                % (start_time, float(lines[1].split(',')[0]), float(lines[-1].split(',')[0]), len(lines) - 1)
-            )
+        self._left = left
+        self._right = right
+        self._grip_left = grip_left
+        self._grip_right = grip_right
+        self._frames = frames
+        self._lg_targets = self._compute_gripper_targets(frames, 'left_gripper')
+        self._rg_targets = self._compute_gripper_targets(frames, 'right_gripper')
+        self._loops = loops
+        self._loop_count = 0
+        self._frame_idx = 0
+        self._start_time = self._node.get_clock().now().nanoseconds / 1e9
 
-            for values in lines[1:]:
-                i += 1
-                loopstr = str(loops) if loops > 0 else 'forever'
-                sys.stdout.write('\r Record %d of %d, loop %d of %s' % (i, len(lines) - 1, loop_count, loopstr))
-                sys.stdout.flush()
-
-                cmd, lcmd, rcmd, values = self.clean_line(values, keys)
-                elapsed_at_entry = self._node.get_clock().now().nanoseconds / 1e9 - start_time
-                iters = 0
-                # command this set of commands until the next frame
-                while (self._node.get_clock().now().nanoseconds / 1e9 - start_time) < values[0]:
-                    iters += 1
-                    if not rclpy.ok():
-                        print('\n Aborting - ROS shutdown')
-                        return False
-                    if len(lcmd):
-                        left.set_joint_positions(lcmd)
-                    if len(rcmd):
-                        right.set_joint_positions(rcmd)
-                    if 'left_gripper' in cmd and grip_left.type() != 'custom' and grip_left.calibrated():
-                        grip_left.command_position(cmd['left_gripper'])
-                    if 'right_gripper' in cmd and grip_right.type() != 'custom' and grip_right.calibrated():
-                        grip_right.command_position(cmd['right_gripper'])
-                    rclpy.spin_once(self._node, timeout_sec=0)
-                    time.sleep(0.001)
-                if i <= 5 or iters > 0:
-                    self._node.get_logger().info(
-                        'rec %d: ts=%.4f elapsed_entry=%.4f iters=%d' % (i, values[0], elapsed_at_entry, iters)
-                    )
-            print()
+        self._timer = self._node.create_timer(0.01, self._tick)
         return True
+
+    def _tick(self):
+        now = self._node.get_clock().now().nanoseconds / 1e9
+        elapsed = now - self._start_time
+
+        # Advance to the latest frame whose timestamp has been reached
+        while self._frame_idx + 1 < len(self._frames) and elapsed >= self._frames[self._frame_idx + 1][0]:
+            self._frame_idx += 1
+
+        _ts, cmd, lcmd, rcmd = self._frames[self._frame_idx]
+
+        if len(lcmd):
+            self._left.set_joint_positions(lcmd)
+        if len(rcmd):
+            self._right.set_joint_positions(rcmd)
+        lg = self._lg_targets[self._frame_idx]
+        if lg is not None and self._grip_left.type() != 'custom':
+            self._grip_left.command_position(lg)
+        rg = self._rg_targets[self._frame_idx]
+        if rg is not None and self._grip_right.type() != 'custom':
+            self._grip_right.command_position(rg)
+
+        loopstr = str(self._loops) if self._loops > 0 else 'forever'
+        sys.stdout.write(
+            '\r Record %d of %d, loop %d of %s'
+            % (self._frame_idx + 1, len(self._frames), self._loop_count + 1, loopstr)
+        )
+        sys.stdout.flush()
+
+        if elapsed > self._frames[-1][0]:
+            self._loop_count += 1
+            print()
+            if self._loops > 0 and self._loop_count >= self._loops:
+                self._timer.cancel()
+                rclpy.shutdown()
+                return
+            # Reset for next loop
+            self._frame_idx = 0
+            self._start_time = self._node.get_clock().now().nanoseconds / 1e9
 
 
 def main():
@@ -213,7 +231,8 @@ Related examples:
     rs.enable(node)
 
     playback = JointPosePlayback(node)
-    playback.map_file(args.file, args.loops)
+    if playback.map_file(args.file, args.loops):
+        rclpy.spin(node)
 
 
 if __name__ == '__main__':

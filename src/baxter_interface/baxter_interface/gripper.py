@@ -605,6 +605,7 @@ class Gripper(object):
         From minimum/closed (0.0) to maximum/open (100.0)
         """
         if self.type() == 'custom':
+            self._node.get_logger().info('custom')
             return self._capability_warning('command_position')
 
         if not self._state.calibrated:
@@ -614,9 +615,16 @@ class Gripper(object):
 
         cmd = EndEffectorCommand.CMD_GO
         arguments = {'position': self._clip(position)}
+        self._cmd_sequence_diag = getattr(self, '_cmd_sequence_diag', 0) + 1
+        if self._cmd_sequence_diag % 500 == 1:
+            self._node.get_logger().info(
+                'command_position: type=%s cal=%s pos=%.2f actual=%.2f seq=%d'
+                % (self.type(), self._state.calibrated, position, self._state.position, self._cmd_sequence_diag)
+            )
         if self.type() == 'electric':
 
             def cmd_test():
+                self._node.get_logger().info('electric')
                 return (fabs(self._state.position - position) < self._parameters['dead_zone']) or self._state.gripping
 
             return self.command(cmd, block, test=cmd_test, timeout=timeout, args=arguments)
