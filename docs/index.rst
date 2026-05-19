@@ -16,3 +16,5 @@ A ROS 2 port of the Baxter robot SDK originally developed by Rethink Robotics.
 
    packages/baxter_interface
    packages/baxter_common
+   packages/baxter_tools
+   packages/baxter_examples
