@@ -5,7 +5,7 @@ Dependencies
 ------------
 
 - ROS 2 Jazzy or Later
-- ``colcon``
+- ``rmw_zenoh_cpp``
 
 Build
 -----
